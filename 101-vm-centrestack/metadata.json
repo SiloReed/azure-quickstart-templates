@@ -1,0 +1,11 @@
+{
+  "$schema": "https://aka.ms/azure-quickstart-templates-metadata-schema#",
+  "type": "QuickStart",
+    "itemDisplayName": "Deploys a CentreStack Virtual Machine",
+    "description": "This template deploys a CentreStack Virtual Machine, public IP",
+    "summary": "CentreStack Server",
+    "githubUsername": "siloreed",
+    "dateUpdated": "2018-10-16"
+}
+
+
