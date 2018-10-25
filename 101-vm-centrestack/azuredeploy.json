@@ -97,7 +97,7 @@
     "asgId": "[resourceId('Microsoft.Network/applicationSecurityGroups',variables('asgName'))]",
     "powerShell": {
       "script": "Install-CentreStack.ps1",
-      "folder": "Scripts",
+      "folder": "scripts",
       "parameters": "[concat('-Verbose')]"
     },
     "nsgRuleNames": {
@@ -108,7 +108,6 @@
     "customScriptExtName": "Install-CentreStack",
     "addressPrefix": "10.0.0.0/16",
     "subnetPrefix": "10.0.0.0/24"
-
   },
   "resources": [
     {
@@ -428,7 +427,7 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]" 
+        "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]"
       ]
     },
     {
@@ -571,7 +570,7 @@
           ]
         },
         "publisher": "Microsoft.Compute",
-        "type": "[variables('customScriptExtName')]",
+        "type": "CustomScriptExtension",
         "typeHandlerVersion": "1.9",
         "protectedSettings": {
           "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -Command \"& {', './', variables('powerShell').script, ' ', variables('powerShell').parameters, '}\"')]"
@@ -693,5 +692,14 @@
       ]
     }
   ],
-  "outputs": {}
+  "outputs": {
+    "fqdn": {
+      "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).dnsSettings.fqdn]",
+      "type": "string"
+    },
+    "ipaddress": {
+      "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
+      "type": "string"
+    }
+  }
 }
