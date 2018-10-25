@@ -2,40 +2,12 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "modules": {
-      "type": "array",
-      "metadata": {
-        "description": "Enter the Module(s) to install including the Version"
-      },
-      "defaultValue": [
-        {
-          "name": "AzureRM",
-          "version": "5.6.0"
-        },
-        {
-          "name": "AzureAD",
-          "version": "2.0.1.3"
-        },
-        {
-          "name": "Bitbucket.v2",
-          "version": "1.1.2"
-        },
-        {
-          "name": "GetPassword",
-          "version": "1.0.0.0"
-        },
-        {
-          "name": "posh-git",
-          "version": "0.7.1"
-        }
-      ]
-    },
     "_artifactsLocation": {
       "type": "string",
       "metadata": {
         "description": "The base URI where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated."
       },
-      "defaultValue": "https://raw.githubusercontent.com/SiloReed/azure-quickstart-templates/master/101-vm-centrestack"
+      "defaultValue": "https://raw.githubusercontent.com/SiloReed/azure-quickstart-templates/centrestack-branch/101-vm-centrestack/"
     },
     "_artifactsLocationSasToken": {
       "type": "securestring",
@@ -57,11 +29,18 @@
         "description": "Password for the Virtual Machine."
       }
     },
-    "dnsNameForPublicIP": {
+    "storageAccounts_diag_name": {
+      "defaultValue": "sacsdiag",
       "type": "string",
-      "minLength": 1,
       "metadata": {
-        "description": "Globally unique DNS Name for the Public IP used to access the Virtual Machine."
+        "description": "Name of the storage account for diagnostics"
+      }
+    },
+    "storageAccounts_disks_name": {
+      "defaultValue": "sacsdisks",
+      "type": "string",
+      "metadata": {
+        "description": "Name of the storage account for boot disks"
       }
     },
     "vmName": {
@@ -80,8 +59,17 @@
         "Standard_A2_v2",
         "Standard_A4_v2",
         "Standard_D2_v3",
-        "Standard_D4_v3"
+        "Standard_D4_v3",
+        "Standard_D2s_v3",
+        "Standard_D4s_v3"
       ]
+    },
+    "dnsNameForPublicIP": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Globally unique DNS Name for the Public IP used to access the Virtual Machine."
+      }
     },
     "windowsOSVersion": {
       "type": "string",
@@ -96,66 +84,381 @@
     }
   },
   "variables": {
+    "nicName": "nic-CentreStack",
+    "vnetName": "vnet-CentreStack",
+    "pipName": "pip-CentreStack",
+    "nsgName": "nsg-CentreStack",
+    "asgName": "asg-CentreStack",
+    "subnetName": "sn-CentreStack",
+    "publicIPAddressType": "Static",
     "imagePublisher": "MicrosoftWindowsServer",
     "imageOffer": "WindowsServer",
     "OSDiskName": "osdiskforwindowssimple",
-    "nicName": "myVMNic",
-    "addressPrefix": "10.0.0.0/16",
-    "subnetName": "Subnet",
-    "subnetPrefix": "10.0.0.0/24",
-    "vhdStorageType": "Standard_LRS",
-    "publicIPAddressName": "myPublicIP",
-    "publicIPAddressType": "Static",
-    "vhdStorageContainerName": "vhds",
-    "virtualNetworkName": "CentreStackVNET",
-    "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', variables('virtualNetworkName'))]",
-    "subnetRef": "[concat(variables('vnetId'), '/subnets/', variables('subnetName'))]",
-    "vhdStorageAccountName": "[concat('vhdstorage', uniqueString(resourceGroup().id))]",
+    "asgId": "[resourceId('Microsoft.Network/applicationSecurityGroups',variables('asgName'))]",
     "powerShell": {
       "script": "Install-CentreStack.ps1",
       "folder": "Scripts",
-      "parameters": "[concat('-Verbose ')]"
+      "parameters": "[concat('-Verbose')]"
     },
-    "singleQuote": "'",
-    "modules": "[replace(replace(replace(replace(replace(string(parameters('modules')), '[{\"', '@(@{'), '\":\"', concat(' = ', variables('singleQuote'))), '\",\"', concat(variables('singleQuote'), '; ')), '\"},{\"', concat(variables('singleQuote'), '}, @{')), '\"}]', concat(variables('singleQuote'), '})'))]"
+    "nsgRuleNames": {
+      "rdp": "AllowRDPToCentreStack",
+      "http": "AllowHTTPToCentreStack",
+      "https": "AllowHTTPSToCentreStack"
+    },
+    "customScriptExtName": "Install-CentreStack",
+    "addressPrefix": "10.0.0.0/16",
+    "subnetPrefix": "10.0.0.0/24"
+
   },
   "resources": [
     {
-      "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('vhdStorageAccountName')]",
-      "apiVersion": "2016-01-01",
+      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-CentreStack/providers/Microsoft.Compute/virtualMachines/CENTRESTACK'.",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[parameters('vmName')]",
+      "apiVersion": "2018-06-01",
       "location": "[resourceGroup().location]",
-      "tags": {
-        "displayName": "StorageAccount"
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D2s_v3"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "[variables('imagePublisher')]",
+            "offer": "[variables('imageOffer')]",
+            "sku": "[parameters('windowsOSVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "osType": "Windows",
+            "name": "[parameters('vmName')]",
+            "createOption": "FromImage",
+            "vhd": {
+              "uri": "[concat('https', '://', parameters('storageAccounts_disks_name'), '.blob.core.windows.net', concat('/vhds/', parameters('vmName'),'20181019130652.vhd'))]"
+            },
+            "caching": "ReadWrite",
+            "diskSizeGB": 127
+          },
+          "dataDisks": []
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]",
+          "windowsConfiguration": {
+            "provisionVMAgent": true,
+            "enableAutomaticUpdates": true
+          },
+          "secrets": []
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
+              "properties": {
+                "primary": true
+              }
+            }
+          ]
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": true,
+            "storageUri": "[concat('https', '://', parameters('storageAccounts_diag_name'), '.blob.core.windows.net', '/')]"
+          }
+        }
       },
-      "sku": {
-        "name": "[variables('vhdStorageType')]"
-      },
-      "kind": "Storage"
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_disks_name'))]",
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_diag_name'))]"
+      ]
     },
     {
-      "apiVersion": "2016-03-30",
-      "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[variables('publicIPAddressName')]",
+      "comments": "asg-CentreStack",
+      "type": "Microsoft.Network/applicationSecurityGroups",
+      "name": "[variables('asgName')]",
+      "apiVersion": "2018-02-01",
       "location": "[resourceGroup().location]",
-      "tags": {
-        "displayName": "PublicIPAddress"
-      },
+      "tags": {},
+      "scale": null,
       "properties": {
+        "provisioningState": "Succeeded"
+      },
+      "dependsOn": []
+    },
+    {
+      "comments": "nic-CentreStack",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[variables('nicName')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+              },
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]"
+              },
+              "primary": true,
+              "privateIPAddressVersion": "IPv4",
+              "applicationSecurityGroups": [
+                {
+                  "id": "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]"
+                }
+              ]
+            }
+          }
+        ],
+        "dnsSettings": {
+          "dnsServers": [],
+          "appliedDnsServers": [],
+          "internalDomainNameSuffix": "exrugufeylrupjg1z2t4kpp1ne.bx.internal.cloudapp.net"
+        },
+        "enableAcceleratedNetworking": false,
+        "enableIPForwarding": false,
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        },
+        "primary": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]",
+        "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]",
+        "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ]
+    },
+    {
+      "comments": "nsg-CentreStack",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('nsgName')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "scale": null,
+      "properties": {
+        "securityRules": [
+          {
+            "name": "[variables('nsgRuleNames').https]",
+            "properties": {
+              "description": "Allow HTTPS to CentreStack Application SecurityGroup",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[variables('asgId')]"
+                }
+              ],
+              "destinationAddressPrefix": ""
+            }
+          },
+          {
+            "name": "[variables('nsgRuleNames').http]",
+            "properties": {
+              "description": "Allows HTTP to CentreStack Application Security Group",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[variables('asgId')]"
+                }
+              ],
+              "destinationAddressPrefix": ""
+            }
+          },
+          {
+            "name": "[variables('nsgRuleNames').rdp]",
+            "properties": {
+              "description": "Allows RDP to CentreStack Application Security Group",
+              "protocol": "TCP",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 120,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": [],
+              "destinationApplicationSecurityGroups": [
+                {
+                  "id": "[variables('asgId')]"
+                }
+              ],
+              "destinationAddressPrefix": ""
+            }
+          }
+        ],
+        "defaultSecurityRules": [
+          {
+            "name": "AllowVnetInBound",
+            "properties": {
+              "description": "Allow inbound traffic from all VMs in VNET",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 65000,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowAzureLoadBalancerInBound",
+            "properties": {
+              "description": "Allow inbound traffic from azure load balancer",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "AzureLoadBalancer",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 65001,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "DenyAllInBound",
+            "properties": {
+              "description": "Deny all inbound traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 65500,
+              "direction": "Inbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowVnetOutBound",
+            "properties": {
+              "description": "Allow outbound traffic from all VMs to all VMs in VNET",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "VirtualNetwork",
+              "destinationAddressPrefix": "VirtualNetwork",
+              "access": "Allow",
+              "priority": 65000,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "AllowInternetOutBound",
+            "properties": {
+              "description": "Allow outbound traffic from all VMs to Internet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "Internet",
+              "access": "Allow",
+              "priority": 65001,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          },
+          {
+            "name": "DenyAllOutBound",
+            "properties": {
+              "description": "Deny all outbound traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 65500,
+              "direction": "Outbound",
+              "sourcePortRanges": [],
+              "destinationPortRanges": [],
+              "sourceAddressPrefixes": [],
+              "destinationAddressPrefixes": []
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]" 
+      ]
+    },
+    {
+      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-CentreStack/providers/Microsoft.Network/publicIPAddresses/pip-CentreStack'.",
+      "type": "Microsoft.Network/publicIPAddresses",
+      "sku": {
+        "name": "Standard",
+        "tier": "Regional"
+      },
+      "name": "[variables('pipName')]",
+      "apiVersion": "2018-02-01",
+      "location": "[resourceGroup().location]",
+      "scale": null,
+      "properties": {
+        "publicIPAddressVersion": "IPv4",
         "publicIPAllocationMethod": "[variables('publicIPAddressType')]",
         "dnsSettings": {
           "domainNameLabel": "[parameters('dnsNameForPublicIP')]"
-        }
-      }
+        },
+        "ipTags": []
+      },
+      "dependsOn": []
     },
     {
-      "apiVersion": "2016-03-30",
+      "comments": "vnet-CentreStack",
       "type": "Microsoft.Network/virtualNetworks",
-      "name": "[variables('virtualNetworkName')]",
+      "name": "[variables('vnetName')]",
+      "apiVersion": "2018-02-01",
       "location": "[resourceGroup().location]",
-      "tags": {
-        "displayName": "VirtualNetwork"
-      },
+      "scale": null,
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -166,125 +469,229 @@
           {
             "name": "[variables('subnetName')]",
             "properties": {
-              "addressPrefix": "[variables('subnetPrefix')]"
+              "addressPrefix": "[variables('subnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+              },
+              "serviceEndpoints": []
             }
           }
-        ]
-      }
-    },
-    {
-      "apiVersion": "2016-03-30",
-      "type": "Microsoft.Network/networkInterfaces",
-      "name": "[variables('nicName')]",
-      "location": "[resourceGroup().location]",
-      "tags": {
-        "displayName": "NetworkInterface"
+        ],
+        "virtualNetworkPeerings": [],
+        "enableDdosProtection": false,
+        "enableVmProtection": false
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/publicIPAddresses/', variables('publicIPAddressName'))]",
-        "[resourceId('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
-      ],
-      "properties": {
-        "ipConfigurations": [
-          {
-            "name": "ipconfig1",
-            "properties": {
-              "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('publicIPAddressName'))]"
-              },
-              "subnet": {
-                "id": "[variables('subnetRef')]"
-              }
-            }
-          }
-        ]
-      }
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ]
     },
     {
-      "name": "[parameters('vmName')]",
-      "type": "Microsoft.Compute/virtualMachines",
+      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-CentreStack/providers/Microsoft.Storage/storageAccounts/sacsdisks'.",
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Premium_LRS",
+        "tier": "Premium"
+      },
+      "kind": "StorageV2",
+      "name": "[parameters('storageAccounts_disks_name')]",
+      "apiVersion": "2018-07-01",
       "location": "[resourceGroup().location]",
-      "apiVersion": "2017-12-01",
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts/', variables('vhdStorageAccountName'))]",
-        "[resourceId('Microsoft.Network/networkInterfaces/', variables('nicName'))]"
-      ],
+      "tags": {},
+      "scale": null,
       "properties": {
-        "hardwareProfile": {
-          "vmSize": "[parameters('vmSize')]"
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
         },
-        "osProfile": {
-          "computerName": "[parameters('vmName')]",
-          "adminUsername": "[parameters('adminUsername')]",
-          "adminPassword": "[parameters('adminPassword')]"
-        },
-        "storageProfile": {
-          "imageReference": {
-            "publisher": "[variables('imagePublisher')]",
-            "offer": "[variables('imageOffer')]",
-            "sku": "[parameters('windowsOSVersion')]",
-            "version": "latest"
-          },
-          "osDisk": {
-            "name": "osdisk",
-            "vhd": {
-              "uri": "[concat(reference(resourceId('Microsoft.Storage/storageAccounts', variables('vhdStorageAccountName')), '2016-01-01').primaryEndpoints.blob, variables('vhdStorageContainerName'), '/', variables('OSDiskName'), '.vhd')]"
+        "supportsHttpsTrafficOnly": false,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
             },
-            "caching": "ReadWrite",
-            "createOption": "FromImage"
-          }
-        },
-        "networkProfile": {
-          "networkInterfaces": [
-            {
-              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+            "blob": {
+              "enabled": true
             }
+          },
+          "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "Hot"
+      },
+      "dependsOn": []
+    },
+    {
+      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-CentreStack/providers/Microsoft.Storage/storageAccounts/sacsdiag'.",
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "name": "[parameters('storageAccounts_diag_name')]",
+      "apiVersion": "2018-07-01",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": false,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
+            },
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "Hot"
+      },
+      "dependsOn": []
+    },
+    {
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(parameters('vmName'), '/', variables('customScriptExtName'))]",
+      "apiVersion": "2018-06-01",
+      "location": "[resourceGroup().location]",
+      "scale": null,
+      "properties": {
+        "autoUpgradeMinorVersion": true,
+        "settings": {
+          "fileUris": [
+            "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').script, parameters('_artifactsLocationSasToken'))]"
           ]
         },
-        "diagnosticsProfile": {
-          "bootDiagnostics": {
-            "enabled": true,
-            "storageUri": "[reference(resourceId('Microsoft.Storage/storageAccounts', variables('vhdStorageAccountName')), '2016-01-01').primaryEndpoints.blob]"
-          }
+        "publisher": "Microsoft.Compute",
+        "type": "[variables('customScriptExtName')]",
+        "typeHandlerVersion": "1.9",
+        "protectedSettings": {
+          "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -Command \"& {', './', variables('powerShell').script, ' ', variables('powerShell').parameters, '}\"')]"
         }
       },
-      "resources": [
-        {
-          "name": "centrestack-script",
-          "type": "extensions",
-          "location": "[resourceGroup().location]",
-          "apiVersion": "2017-12-01",
-          "dependsOn": [
-            "[parameters('vmName')]"
-          ],
-          "properties": {
-            "publisher": "Microsoft.Compute",
-            "type": "CustomScriptExtension",
-            "typeHandlerVersion": "1.9",
-            "autoUpgradeMinorVersion": true,
-            "settings": {
-              "fileUris": [
-                "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').script, parameters('_artifactsLocationSasToken'))]"
-              ]
-            },
-            "protectedSettings": {
-              "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -Command \"& {', './', variables('powerShell').script, ' ', variables('powerShell').parameters, '}\"')]"
-            }
+      "dependsOn": [
+        "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
+      ]
+    },
+    {
+      "comments": "nsg rule AllowHTTPSToCentreStack",
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "name": "[concat(variables('nsgName'), '/', variables('nsgRuleNames').https)]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2018-02-01",
+      "scale": null,
+      "properties": {
+        "description": "Allow HTTPS to CentreStack Application SecurityGroup",
+        "protocol": "TCP",
+        "sourcePortRange": "*",
+        "destinationPortRange": "443",
+        "sourceAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 110,
+        "direction": "Inbound",
+        "sourcePortRanges": [],
+        "destinationPortRanges": [],
+        "sourceAddressPrefixes": [],
+        "destinationAddressPrefixes": [],
+        "destinationApplicationSecurityGroups": [
+          {
+            "id": "[variables('asgId')]"
           }
-        }
-      ],
-      "tags": {
-        "displayName": "VirtualMachine"
+        ],
+        "destinationAddressPrefix": ""
       },
-      "type": "Microsoft.Compute/virtualMachines"
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ]
+    },
+    {
+      "comments": "nsg rule AllowHTTPToCentreStack",
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "name": "[concat(variables('nsgName'), '/', variables('nsgRuleNames').http)]",
+      "location": "[resourceGroup().location]",
+      "apiVersion": "2018-02-01",
+      "scale": null,
+      "properties": {
+        "description": "Allows HTTP to CentreStack Application Security Group",
+        "protocol": "TCP",
+        "sourcePortRange": "*",
+        "destinationPortRange": "80",
+        "sourceAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 100,
+        "direction": "Inbound",
+        "sourcePortRanges": [],
+        "destinationPortRanges": [],
+        "sourceAddressPrefixes": [],
+        "destinationAddressPrefixes": [],
+        "destinationApplicationSecurityGroups": [
+          {
+            "id": "[variables('asgId')]"
+          }
+        ],
+        "destinationAddressPrefix": ""
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ]
+    },
+    {
+      "comments": "nsg rule AllowRDPToCentreStack",
+      "type": "Microsoft.Network/networkSecurityGroups/securityRules",
+      "location": "[resourceGroup().location]",
+      "name": "[concat(variables('nsgName'), '/', variables('nsgRuleNames').rdp)]",
+      "apiVersion": "2018-02-01",
+      "scale": null,
+      "properties": {
+        "description": "Allows RDP to CentreStack Application Security Group",
+        "protocol": "TCP",
+        "sourcePortRange": "*",
+        "destinationPortRange": "3389",
+        "sourceAddressPrefix": "*",
+        "access": "Allow",
+        "priority": 120,
+        "direction": "Inbound",
+        "sourcePortRanges": [],
+        "destinationPortRanges": [],
+        "sourceAddressPrefixes": [],
+        "destinationAddressPrefixes": [],
+        "destinationApplicationSecurityGroups": [
+          {
+            "id": "[variables('asgId')]"
+          }
+        ],
+        "destinationAddressPrefix": ""
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ]
+    },
+    {
+      "comments": "subnet sn-Public.",
+      "type": "Microsoft.Network/virtualNetworks/subnets",
+      "name": "[concat(variables('vnetName'), '/', variables('subnetName'))]",
+      "apiVersion": "2018-02-01",
+      "scale": null,
+      "properties": {
+        "addressPrefix": "[variables('subnetPrefix')]",
+        "networkSecurityGroup": {
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+        },
+        "serviceEndpoints": []
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
+        "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
+      ]
     }
   ],
-  "outputs": {
-    "Modules": {
-      "type": "string",
-      "value": "[variables('modules')]"
-    }
-  }
-
+  "outputs": {}
 }

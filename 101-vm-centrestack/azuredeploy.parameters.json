@@ -6,13 +6,13 @@
       "value": "csadmin"
     },
     "dnsNameForPublicIP": {
-      "value": "centrestackjjr"
+      "value": "centrestack"
     },
     "vmSize": {
-      "value": "Standard_A2_v2"
+      "value": "Standard_D2s_v3"
     },
     "vmName": {
-      "value": "centrestack"
+      "value": "CENTRESTACK"
     }
   }
 }
