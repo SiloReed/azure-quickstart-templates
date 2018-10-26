@@ -29,6 +29,19 @@
         "description": "Password for the Virtual Machine."
       }
     },
+    "adminSQLUsername": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Username for the Azure SQL Server."
+      }
+    },
+    "adminSQLPassword": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Password for the Azure SQL Server."
+      }
+    },
     "storageAccounts_diag_name": {
       "defaultValue": "sacsdiag",
       "type": "string",
@@ -81,6 +94,13 @@
       "metadata": {
         "description": "The Windows version for the VM. This will pick a fully patched image of this given Windows version. Allowed values: 2008-R2-SP1, 2012-Datacenter, 2012-R2-Datacenter."
       }
+    },
+    "serverNameSQL": {
+      "type": "string",
+      "minLength": 1,
+      "metadata": {
+        "description": "Specifiy the name of Azure SQL Server."
+      }
     }
   },
   "variables": {
@@ -93,7 +113,8 @@
     "publicIPAddressType": "Static",
     "imagePublisher": "MicrosoftWindowsServer",
     "imageOffer": "WindowsServer",
-    "OSDiskName": "osdiskforwindowssimple",
+    "saDisksName": "[toLower(concat(parameters('storageAccounts_disks_name'), uniqueString(resourceGroup().id)))]",
+    "saDiagName": "[toLower(concat(parameters('storageAccounts_diag_name'), uniqueString(resourceGroup().id)))]",
     "asgId": "[resourceId('Microsoft.Network/applicationSecurityGroups',variables('asgName'))]",
     "powerShell": {
       "script": "Install-CentreStack.ps1",
@@ -107,7 +128,18 @@
     },
     "customScriptExtName": "Install-CentreStack",
     "addressPrefix": "10.0.0.0/16",
-    "subnetPrefix": "10.0.0.0/24"
+    "subnetPrefix": "10.0.0.0/24",
+    "sqlServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
+    "databaseName": "csmain",
+    "collation": "SQL_Latin1_General_CP1_CI_AS",
+    "maxSizeBytes": 268435456000,
+    "sampleName": "",
+    "zoneRedundant": false,
+    "licenseType": "",
+    "skuName": "S0",
+    "tier": "Standard",
+    "allowAzureIps": true,
+    "enableATP": false
   },
   "resources": [
     {
@@ -134,7 +166,7 @@
             "name": "[parameters('vmName')]",
             "createOption": "FromImage",
             "vhd": {
-              "uri": "[concat('https', '://', parameters('storageAccounts_disks_name'), '.blob.core.windows.net', concat('/vhds/', parameters('vmName'),'20181019130652.vhd'))]"
+              "uri": "[concat('https', '://', variables('saDisksName'), '.blob.core.windows.net', concat('/vhds/', parameters('vmName'),'20181019130652.vhd'))]"
             },
             "caching": "ReadWrite",
             "diskSizeGB": 127
@@ -164,14 +196,14 @@
         "diagnosticsProfile": {
           "bootDiagnostics": {
             "enabled": true,
-            "storageUri": "[concat('https', '://', parameters('storageAccounts_diag_name'), '.blob.core.windows.net', '/')]"
+            "storageUri": "[concat('https', '://', variables('saDiagName'), '.blob.core.windows.net', '/')]"
           }
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_disks_name'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('saDisksName'))]",
         "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccounts_diag_name'))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('saDiagName'))]"
       ]
     },
     {
@@ -485,14 +517,14 @@
       ]
     },
     {
-      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-CentreStack/providers/Microsoft.Storage/storageAccounts/sacsdisks'.",
+      "comments": "storageAccounts sacsdisks'.",
       "type": "Microsoft.Storage/storageAccounts",
       "sku": {
         "name": "Premium_LRS",
         "tier": "Premium"
       },
       "kind": "StorageV2",
-      "name": "[parameters('storageAccounts_disks_name')]",
+      "name": "[variables('saDisksName')]",
       "apiVersion": "2018-07-01",
       "location": "[resourceGroup().location]",
       "tags": {},
@@ -528,7 +560,7 @@
         "tier": "Standard"
       },
       "kind": "StorageV2",
-      "name": "[parameters('storageAccounts_diag_name')]",
+      "name": "[variables('saDiagName')]",
       "apiVersion": "2018-07-01",
       "location": "[resourceGroup().location]",
       "tags": {},
@@ -690,7 +722,73 @@
         "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
         "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
       ]
-    }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "location": "[resourceGroup().location]",
+      "name": "[variables('sqlServerName')]",
+      "properties": {
+          "administratorLogin": "[parameters('adminSQLUsername')]",
+          "administratorLoginPassword": "[parameters('adminSQLPassword')]",
+          "version": "12.0"
+      },
+      "resources": [
+          {
+              "apiVersion": "2017-10-01-preview",
+              "dependsOn": [
+                  "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+              ],
+              "location": "[resourceGroup().location]",
+              "name": "[variables('databaseName')]",
+              "properties": {
+                  "collation": "[variables('collation')]",
+                  "maxSizeBytes": "[variables('maxSizeBytes')]",
+                  "sampleName": "[variables('sampleName')]",
+                  "zoneRedundant": "[variables('zoneRedundant')]",
+                  "licenseType": "[variables('licenseType')]"
+              },
+              "sku": {
+                  "name": "[variables('skuName')]",
+                  "tier": "[variables('tier')]"
+              },
+              "type": "databases"
+          },
+          {
+              "condition": "[variables('allowAzureIps')]",
+              "apiVersion": "2014-04-01-preview",
+              "dependsOn": [
+                  "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+              ],
+              "location": "[resourceGroup().location]",
+              "name": "AllowAllWindowsAzureIps",
+              "properties": {
+                  "endIpAddress": "0.0.0.0",
+                  "startIpAddress": "0.0.0.0"
+              },
+              "type": "firewallrules"
+          },
+          {
+              "condition": "[variables('enableATP')]",
+              "apiVersion": "2017-03-01-preview",
+              "type": "securityAlertPolicies",
+              "name": "Default",
+              "dependsOn": [
+                  "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]",
+                  "[concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))]"
+              ],
+              "properties": {
+                  "state": "Enabled",
+                  "disabledAlerts": [],
+                  "emailAddresses": [],
+                  "emailAccountAdmins": true
+              }
+          }
+      ],
+      "type": "Microsoft.Sql/servers",
+      "dependsOn": [
+        "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
+      ]
+  }    
   ],
   "outputs": {
     "fqdn": {

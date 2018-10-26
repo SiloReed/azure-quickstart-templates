@@ -5,6 +5,9 @@
     "adminUsername": {
       "value": "csadmin"
     },
+    "adminSQLUsername": {
+      "value": "sqladmin"
+    },
     "dnsNameForPublicIP": {
       "value": "centrestack"
     },
@@ -13,6 +16,9 @@
     },
     "vmName": {
       "value": "CENTRESTACK"
+    },
+    "serverNameSQL": {
+      "value": "CENTRESTACKDB"
     }
   }
 }
