@@ -17,6 +17,7 @@
       "defaultValue": ""
     },
     "adminUsername": {
+      "defaultValue": "csadmin",
       "type": "string",
       "minLength": 1,
       "metadata": {
@@ -30,6 +31,7 @@
       }
     },
     "adminSQLUsername": {
+      "defaultValue": "dbadmin",
       "type": "string",
       "minLength": 1,
       "metadata": {
@@ -42,22 +44,30 @@
         "description": "Password for the Azure SQL Server."
       }
     },
-    "storageAccounts_diag_name": {
+    "storageAccountsDiagName": {
       "defaultValue": "sacsdiag",
       "type": "string",
       "metadata": {
-        "description": "Name of the storage account for diagnostics"
+        "description": "The base name of the storage account for diagnostics. The actual name will be a lower case unique string."
       }
     },
-    "storageAccounts_disks_name": {
-      "defaultValue": "sacsdisks",
+    "storageAccountsDisksName": {
+      "defaultValue": "sacsdisk",
       "type": "string",
       "metadata": {
-        "description": "Name of the storage account for boot disks"
+        "description": "The base name of the storage account for boot disks. The actual name will be a lower case unique string."
+      }
+    },
+    "storageAccountsBlobName": {
+      "defaultValue": "sacsblob",
+      "type": "string",
+      "metadata": {
+        "description": "The base name of the storage account for the back end storage blob container. The actual name will be a lower case unique string."
       }
     },
     "vmName": {
       "type": "string",
+      "defaultValue": "CENTRESTACK",
       "metadata": {
         "description": "Specifiy the name of VM."
       }
@@ -67,10 +77,12 @@
       "metadata": {
         "description": "Specifiy the size of VM required for the VM(s)"
       },
-      "defaultValue": "Standard_A4_v2",
+      "defaultValue": "Standard_D2s_v3",
       "allowedValues": [
         "Standard_A2_v2",
         "Standard_A4_v2",
+        "Standard_B2ms",
+        "Standard_B4ms",
         "Standard_D2_v3",
         "Standard_D4_v3",
         "Standard_D2s_v3",
@@ -78,6 +90,7 @@
       ]
     },
     "dnsNameForPublicIP": {
+      "defaultValue": "centrestack",
       "type": "string",
       "minLength": 1,
       "metadata": {
@@ -96,6 +109,7 @@
       }
     },
     "serverNameSQL": {
+      "defaultValue": "csazuresql",
       "type": "string",
       "minLength": 1,
       "metadata": {
@@ -113,8 +127,12 @@
     "publicIPAddressType": "Static",
     "imagePublisher": "MicrosoftWindowsServer",
     "imageOffer": "WindowsServer",
-    "saDisksName": "[toLower(concat(parameters('storageAccounts_disks_name'), uniqueString(resourceGroup().id)))]",
-    "saDiagName": "[toLower(concat(parameters('storageAccounts_diag_name'), uniqueString(resourceGroup().id)))]",
+    "saDisksName": "[toLower(concat(parameters('storageAccountsDisksName'), uniqueString(resourceGroup().id)))]",
+    "saDiagName": "[toLower(concat(parameters('storageAccountsDiagName'), uniqueString(resourceGroup().id)))]",
+    "saBlobName": "[toLower(concat(parameters('storageAccountsBlobName'), uniqueString(resourceGroup().id)))]",
+    "containerName": "centrestackbes",
+    "saType": "[if(contains(parameters('vmSize'), 's_v3'), 'Premium_LRS', 'Standard_LRS')]",
+    "saTier": "[if(contains(parameters('vmSize'), 's_v3'), 'Premium', 'Standard')]",
     "asgId": "[resourceId('Microsoft.Network/applicationSecurityGroups',variables('asgName'))]",
     "powerShell": {
       "script": "Install-CentreStack.ps1",
@@ -143,7 +161,7 @@
   },
   "resources": [
     {
-      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-CentreStack/providers/Microsoft.Compute/virtualMachines/CENTRESTACK'.",
+      "comments": "virtualMachines CENTRESTACK'",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[parameters('vmName')]",
       "apiVersion": "2018-06-01",
@@ -152,7 +170,7 @@
       "scale": null,
       "properties": {
         "hardwareProfile": {
-          "vmSize": "Standard_D2s_v3"
+          "vmSize": "[parameters('vmSize')]"
         },
         "storageProfile": {
           "imageReference": {
@@ -166,7 +184,7 @@
             "name": "[parameters('vmName')]",
             "createOption": "FromImage",
             "vhd": {
-              "uri": "[concat('https', '://', variables('saDisksName'), '.blob.core.windows.net', concat('/vhds/', parameters('vmName'),'20181019130652.vhd'))]"
+              "uri": "[concat('https', '://', variables('saDisksName'), '.blob.core.windows.net', concat('/vhds/', parameters('vmName'), uniqueString(resourceGroup().id), '.vhd'))]"
             },
             "caching": "ReadWrite",
             "diskSizeGB": 127
@@ -463,7 +481,7 @@
       ]
     },
     {
-      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-CentreStack/providers/Microsoft.Network/publicIPAddresses/pip-CentreStack'.",
+      "comments": "pip-CentreStack'.",
       "type": "Microsoft.Network/publicIPAddresses",
       "sku": {
         "name": "Standard",
@@ -517,11 +535,11 @@
       ]
     },
     {
-      "comments": "storageAccounts sacsdisks'.",
+      "comments": "storageAccounts sadisk",
       "type": "Microsoft.Storage/storageAccounts",
       "sku": {
-        "name": "Premium_LRS",
-        "tier": "Premium"
+        "name": "[variables('saType')]",
+        "tier": "[variables('saTier')]"
       },
       "kind": "StorageV2",
       "name": "[variables('saDisksName')]",
@@ -553,7 +571,7 @@
       "dependsOn": []
     },
     {
-      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-CentreStack/providers/Microsoft.Storage/storageAccounts/sacsdiag'.",
+      "comments": "storageAccounts sacsdiag",
       "type": "Microsoft.Storage/storageAccounts",
       "sku": {
         "name": "Standard_LRS",
@@ -588,6 +606,52 @@
       },
       "dependsOn": []
     },
+    {
+      "comments": "storageAccounts sacsblob",
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "name": "[variables('saBlobName')]",
+      "apiVersion": "2018-07-01",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": false,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
+            },
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "Hot"
+      },
+      "resources": [
+        {
+          "name": "[concat('default/', variables('containerName'))]",
+          "type": "blobServices/containers",
+          "apiVersion": "2018-03-01-preview",
+          "dependsOn": [
+            "[variables('saBlobName')]"
+          ]
+        }
+      ],      
+      "dependsOn": []
+    },    
     {
       "type": "Microsoft.Compute/virtualMachines/extensions",
       "name": "[concat(parameters('vmName'), '/', variables('customScriptExtName'))]",
@@ -706,7 +770,7 @@
       ]
     },
     {
-      "comments": "subnet sn-Public.",
+      "comments": "subnet sn-Public",
       "type": "Microsoft.Network/virtualNetworks/subnets",
       "name": "[concat(variables('vnetName'), '/', variables('subnetName'))]",
       "apiVersion": "2018-02-01",
@@ -762,8 +826,8 @@
               "location": "[resourceGroup().location]",
               "name": "AllowAllWindowsAzureIps",
               "properties": {
-                  "endIpAddress": "0.0.0.0",
-                  "startIpAddress": "0.0.0.0"
+                  "endIpAddress": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]",
+                  "startIpAddress": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
               },
               "type": "firewallrules"
           },
@@ -798,6 +862,15 @@
     "ipaddress": {
       "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
       "type": "string"
+    },
+    "privateipaddress": {
+      "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]",
+      "type": "string"
+    },
+    "dbconnstr": {
+      "value": "[concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))]",
+      "type": "string"
+
     }
   }
 }

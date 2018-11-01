@@ -19,6 +19,15 @@
     },
     "serverNameSQL": {
       "value": "CENTRESTACKDB"
+    },
+    "storageAccountsDiagName": {
+      "value": "sacsdiag"
+    },
+    "storageAccountsDisksName": {
+      "value": "sacsdisk"
+    },
+    "storageAccountsBlobName": {
+      "value": "sacsblob"
     }
   }
 }

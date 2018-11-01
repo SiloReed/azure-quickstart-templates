@@ -46,6 +46,14 @@ Click on the **Deploy to Azure** button below. This will open the Azure Portal (
 * serverNameSQL
   The base name of the Azure SQL Server instance. The actual name will be a lower case unique string.
 
+* storageAccountsDiagName
+  The base name of the storage account for diagnostics. The actual name will be a lower case unique string.
+
+* storageAccountsDisksName
+  The base name of the storage account for boot disks. The actual name will be a lower case unique string.
+
+* storageAccountsBlobName
+
 * _artifactsLocation
   Storage account name to receive post-build staging folder upload.
 * _artifactsLocationSasToken
