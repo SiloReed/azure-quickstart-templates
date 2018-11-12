@@ -256,7 +256,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saDisksName'))]",
-        "[reference('linkedNetworkTemplate').outputs.nicResourceId.value]",
+        "linkedNetworkTemplate", "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nicName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saDiagName'))]"
       ]
     },
@@ -413,6 +413,9 @@
           "uri": "https://armtutorials.blob.core.windows.net/linkedtemplates/linkedSQLTemplate.json"
         },
         "parameters": {
+          "nicName": {
+            "value": "[variables('nicName')]"
+          },
           "serverNameSQL": {
             "value": "[parameters('serverNameSQL')]"
           },
