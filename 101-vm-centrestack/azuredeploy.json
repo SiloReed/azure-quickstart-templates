@@ -240,7 +240,7 @@
         "networkProfile": {
           "networkInterfaces": [
             {
-              "id": "[reference('linkedNetworkTemplate').outputs.nicResourceId.value]",
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
               "properties": {
                 "primary": true
               }
@@ -255,6 +255,7 @@
         }
       },
       "dependsOn": [
+        "linkedNetworkTemplate",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saDisksName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saDiagName'))]"
       ]
