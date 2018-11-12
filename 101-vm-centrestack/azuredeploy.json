@@ -166,7 +166,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "https://armtutorials.blob.core.windows.net/linkedtemplates/linkedNetworkTemplate.json"
+          "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/linkedNetworkTemplate.json')]" 
         },
         "parameters": {
           "dnsNameForPublicIP": {
@@ -256,7 +256,6 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saDisksName'))]",
-        "linkedNetworkTemplate", "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saDiagName'))]"
       ]
     },
@@ -410,7 +409,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "https://armtutorials.blob.core.windows.net/linkedtemplates/linkedSQLTemplate.json"
+          "uri": "[concat(parameters('_artifactsLocation'), '/linkedtemplates/linkedSQLTemplate.json')]" 
         },
         "parameters": {
           "nicName": {
