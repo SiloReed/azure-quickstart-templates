@@ -166,7 +166,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), 'linkedtemplates/linkedNetworkTemplate.json', parameters('_artifactsLocationSasToken'))]" 
+          "uri": "[concat(parameters('_artifactsLocation'), 'nestedtemplates/linkedNetworkTemplate.json', parameters('_artifactsLocationSasToken'))]" 
         },
         "parameters": {
           "dnsNameForPublicIP": {
@@ -409,7 +409,7 @@
       "properties": {
         "mode": "Incremental",
         "templateLink": {
-          "uri": "[concat(parameters('_artifactsLocation'), 'linkedtemplates/linkedSQLTemplate.json', parameters('_artifactsLocationSasToken'))]" 
+          "uri": "[concat(parameters('_artifactsLocation'), 'nestedtemplates/linkedSQLTemplate.json', parameters('_artifactsLocationSasToken'))]" 
         },
         "parameters": {
           "nicName": {
