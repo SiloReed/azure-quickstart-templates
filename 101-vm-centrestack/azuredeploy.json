@@ -895,9 +895,9 @@
       "type": "string",
       "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
     },
-    "dbconnstr": {
+    "sqldbconnstr": {
       "type": "string",
-      "value": "[concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))]"
+      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName')), json('null'))]"
     }
   }
 }
