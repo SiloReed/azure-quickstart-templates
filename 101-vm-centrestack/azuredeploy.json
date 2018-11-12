@@ -256,7 +256,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saDisksName'))]",
-        "linkedNetworkTemplate", "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nicName'))]",
+        "linkedNetworkTemplate", "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]",
         "[resourceId('Microsoft.Storage/storageAccounts', variables('saDiagName'))]"
       ]
     },
