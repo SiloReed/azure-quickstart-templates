@@ -8,15 +8,17 @@ Param
 	[array]$Modules
 )
 
+# Install NuGet package provider
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+
 # Installing Modules from Azure template 
 Foreach ($Module in $Modules) {	
-    Find-Module -Name $Module.Name -RequiredVersion $Module.Version -Repository PSGallery -Verbose | Save-Module -Path C:\Modules -Verbose	
+    Find-Module -Name $Module.Name -RequiredVersion $Module.Version -Repository PSGallery -Verbose | Install-Module -Force -Confirm:$false -SkipPublisherCheck -Verbose 
 }
 
 # Remove old default modules and install new versions
 $DefaultModules = @("PowerShellGet", "PackageManagement","Pester")
-Foreach ($Module in $DefaultModules)
-{
+Foreach ($Module in $DefaultModules) {
 	if ($tmp = Get-Module $Module -ErrorAction SilentlyContinue) {	
         Remove-Module $Module -Force	
     }
@@ -26,7 +28,10 @@ Foreach ($Module in $DefaultModules)
 # Uninstalling old Azure PowerShell Modules
 $programName = "Microsoft Azure PowerShell"
 $app = Get-WmiObject -Class Win32_Product -Filter "Name Like '$($programName)%'" -Verbose
-$app.Uninstall()
+if ($null -ne $app) {
+    $app.Uninstall()
+}
+
 
 # Get the OAuth2 token for the virtual machine's managed identity allowing it to query the Azure Management REST APIs
 $uri = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F'

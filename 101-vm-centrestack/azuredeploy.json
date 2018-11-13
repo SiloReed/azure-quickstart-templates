@@ -23,7 +23,11 @@
       },
       "defaultValue": [
         {
-          "name": "AzureRM",
+          "name": "AzureRM.Compute",
+          "version": "5.8.0"
+        },
+        {
+          "name": "AzureRM.Profile",
           "version": "5.8.0"
         },
         {
