@@ -187,7 +187,9 @@
     "tier": "Standard",
     "allowAzureIps": true,
     "sqlServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
-    "enableATP": false
+    "enableATP": false,
+    "readerRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+    "roleAssignmentName": "[concat(parameters('vmName'), '/Microsoft.Authorization/', guid(subscription().subscriptionId))]"
   },
   "resources": [
     {
@@ -614,6 +616,9 @@
       "name": "[parameters('vmName')]",
       "apiVersion": "2018-06-01",
       "location": "[resourceGroup().location]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "tags": {},
       "scale": null,
       "properties": {
@@ -880,6 +885,19 @@
       "dependsOn": [
         "[resourceId('Microsoft.Network/networkInterfaces', variables('nicName'))]"
       ]
+    },
+    {
+      "apiVersion": "2017-09-01",
+      "type": "Microsoft.Authorization/roleAssignments",
+      "name": "[guid(resourceGroup().id)]",
+      "properties": {
+        "roleDefinitionId": "[variables('readerRole')]",
+        "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines/', parameters('vmName')), '2017-12-01', 'Full').identity.principalId]",
+        "scope": "[resourceGroup().id]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+      ]
     }
   ],
   "outputs": {
@@ -896,8 +914,8 @@
       "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
     },
     "sqldbconnstr": {
-      "type": "string",
-      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName')), json('null'))]"
+      "type": "object",
+      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))), json('null'))]"
     }
   }
 }
