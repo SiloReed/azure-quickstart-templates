@@ -16,6 +16,22 @@
       },
       "defaultValue": ""
     },
+    "modules": {
+      "type": "array",
+      "metadata": {
+        "description": "Enter the Module(s) to install including the Version"
+      },
+      "defaultValue": [
+        {
+          "name": "AzureRM",
+          "version": "5.8.0"
+        },
+        {
+          "name": "AzureAD",
+          "version": "2.0.2.4"
+        }
+      ]
+    },    
     "adminUsername": {
       "defaultValue": "csadmin",
       "type": "string",
@@ -175,7 +191,7 @@
     "powerShell": {
       "script": "Install-CentreStack.ps1",
       "folder": "scripts",
-      "parameters": "[concat('-Verbose')]"
+      "parameters": "[concat('-Verbose ', ' -Modules ', variables('modules'))]"
     },
     "customScriptExtName": "Install-CentreStack",
     "databaseName": "csmain",
@@ -189,7 +205,8 @@
     "sqlServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
     "enableATP": false,
     "readerRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
-    "roleAssignmentName": "[concat(parameters('vmName'), '/Microsoft.Authorization/', guid(subscription().subscriptionId))]"
+    "singleQuote": "'",
+    "modules": "[replace(replace(replace(replace(replace(string(parameters('modules')), '[{\"', '@(@{'), '\":\"', concat(' = ', variables('singleQuote'))), '\",\"', concat(variables('singleQuote'), '; ')), '\"},{\"', concat(variables('singleQuote'), '}, @{')), '\"}]', concat(variables('singleQuote'), '})'))]"
   },
   "resources": [
     {
@@ -901,6 +918,10 @@
     }
   ],
   "outputs": {
+    "Modules": {
+      "type": "string",
+      "value": "[variables('modules')]"
+    },
     "fqdn": {
       "type": "string",
       "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).dnsSettings.fqdn]"
