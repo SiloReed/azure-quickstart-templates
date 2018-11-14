@@ -39,26 +39,30 @@
           "version": "5.8.0"
         },
         {
+          "name": "AzureRM.KeyVault",
+          "version": "5.2.1"
+        },
+        {
           "name": "AzureAD",
           "version": "2.0.2.4"
         }
       ]
-    },    
-    "adminUsername": {
+    },
+    "adminVMUsername": {
       "defaultValue": "csadmin",
       "type": "string",
       "minLength": 1,
       "metadata": {
-        "description": "Username for the Virtual Machine."
+        "description": "Username for the CentreStack Virtual Machine."
       }
     },
-    "adminPassword": {
+    "adminVMPassword": {
       "type": "securestring",
       "metadata": {
-        "description": "Password for the Virtual Machine."
+        "description": "Password for the CentreStack Virtual Machine."
       }
     },
-    "adminSQLUsername": {
+    "adminDBUsername": {
       "defaultValue": "dbadmin",
       "type": "string",
       "minLength": 1,
@@ -66,7 +70,7 @@
         "description": "Username for the Azure SQL Server."
       }
     },
-    "adminSQLPassword": {
+    "adminDBPassword": {
       "type": "securestring",
       "metadata": {
         "description": "Password for the Azure SQL Server."
@@ -180,6 +184,7 @@
     "nicName": "nic-CentreStack",
     "vnetName": "vnet-CentreStack",
     "pipName": "pip-CentreStack",
+    "kvName": "kv-CentreStack",
     "nsgName": "nsg-CentreStack",
     "asgName": "asg-CentreStack",
     "subnetName": "sn-CentreStack",
@@ -203,7 +208,7 @@
     "powerShell": {
       "script": "Install-CentreStack.ps1",
       "folder": "scripts",
-      "parameters": "[concat('-Verbose', ' -Build ', parameters('buildNumber'), ' -Modules ', variables('modules'))]"
+      "parameters": "[concat('-Verbose', ' -Build ', parameters('buildNumber'), ' -VaultName ', variables('kvName'), ' -Modules ', variables('modules'))]"
     },
     "customScriptExtName": "Install-CentreStack",
     "databaseName": "csmain",
@@ -217,6 +222,7 @@
     "sqlServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
     "enableATP": false,
     "readerRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+    "roleAssignmentName": "[guid(resourceGroup().id)]",
     "singleQuote": "'",
     "modules": "[replace(replace(replace(replace(replace(string(parameters('modules')), '[{\"', '@(@{'), '\":\"', concat(' = ', variables('singleQuote'))), '\",\"', concat(variables('singleQuote'), '; ')), '\"},{\"', concat(variables('singleQuote'), '}, @{')), '\"}]', concat(variables('singleQuote'), '})'))]"
   },
@@ -675,8 +681,8 @@
         },
         "osProfile": {
           "computerName": "[parameters('vmName')]",
-          "adminUsername": "[parameters('adminUsername')]",
-          "adminPassword": "[parameters('adminPassword')]",
+          "adminVMUsername": "[parameters('adminVMUsername')]",
+          "adminVMPassword": "[parameters('adminVMPassword')]",
           "windowsConfiguration": {
             "provisionVMAgent": true,
             "enableAutomaticUpdates": true
@@ -854,8 +860,8 @@
       "location": "[resourceGroup().location]",
       "name": "[variables('sqlServerName')]",
       "properties": {
-        "administratorLogin": "[parameters('adminSQLUsername')]",
-        "administratorLoginPassword": "[parameters('adminSQLPassword')]",
+        "administratorLogin": "[parameters('adminDBUsername')]",
+        "administratorLoginPassword": "[parameters('adminDBPassword')]",
         "version": "12.0"
       },
       "resources": [
@@ -918,7 +924,7 @@
     {
       "apiVersion": "2017-09-01",
       "type": "Microsoft.Authorization/roleAssignments",
-      "name": "[guid(resourceGroup().id)]",
+      "name": "[variables('roleAssignmentName')]",
       "properties": {
         "roleDefinitionId": "[variables('readerRole')]",
         "principalId": "[reference(resourceId('Microsoft.Compute/virtualMachines/', parameters('vmName')), '2017-12-01', 'Full').identity.principalId]",
@@ -926,6 +932,90 @@
       },
       "dependsOn": [
         "[concat('Microsoft.Compute/virtualMachines/', parameters('vmName'))]"
+      ]
+    },
+    {
+      "comments": "Generalized from resource: '/subscriptions/2f2811f7-deca-4eb2-9c8e-4129e62bb915/resourceGroups/rg-deploy1/providers/Microsoft.KeyVault/vaults/kv-centrestack'.",
+      "type": "Microsoft.KeyVault/vaults",
+      "name": "[variables('kvName')]",
+      "apiVersion": "2016-10-01",
+      "location": "[resourceGroup().location]",
+      "tags": {},
+      "scale": null,
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "Standard"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Compute/virtualMachines/', parameters('vmName')), '2017-12-01', 'Full').identity.principalId]",
+            "permissions": {
+              "keys": [
+                "Get",
+                "List",
+                "Update",
+                "Create",
+                "Import",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore"
+              ],
+              "secrets": [
+                "Get",
+                "List",
+                "Set",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore"
+              ],
+              "certificates": []
+            }
+          }
+        ],
+        "enabledForDeployment": false,
+        "enabledForDiskEncryption": false,
+        "enabledForTemplateDeployment": false
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Authorization/roleAssignments/', variables('roleAssignmentName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('kvName'), '/adminDBUsername')]",
+      "apiVersion": "2016-10-01",
+      "properties": {
+        "value": "[parameters('adminDBUsername')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.KeyVault/vaults/', variables('kvName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('kvName'), '/adminDBPassword')]",
+      "apiVersion": "2016-10-01",
+      "properties": {
+        "value": "[parameters('adminDBPassword')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.KeyVault/vaults/', variables('kvName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('kvName'), '/databaseHost')]",
+      "apiVersion": "2016-10-01",
+      "properties": {
+        "value": "[parameters('databaseHost')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.KeyVault/vaults/', variables('kvName'))]"
       ]
     }
   ],
@@ -946,13 +1036,9 @@
       "type": "string",
       "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
     },
-    "sqldbconnstr": {
+    "database": {
       "type": "object",
-      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))), json('null'))]"
-    },
-    "scriptoutput": {
-      "type": "string",
-      "value": "[reference(concat('Microsoft.Compute/virtualMachines/', parameters('vmName'), '/extensions/', variables('customScriptExtName')).instanceView.substatuses[0].message)]"
-     }
+      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))), 'all-in-one')]"
+    }
   }
 }

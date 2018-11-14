@@ -5,8 +5,8 @@
     "adminUsername": {
       "value": "csadmin"
     },
-    "adminSQLUsername": {
-      "value": "sqladmin"
+    "adminDBUsername": {
+      "value": "dbadmin"
     },
     "dnsNameForPublicIP": {
       "value": "centrestack"
@@ -28,6 +28,34 @@
     },
     "storageAccountsBlobName": {
       "value": "sacsblob"
+    },
+    "buildNumber": {
+      "value": "6033"
+    },
+    "modules": {
+      "value": [
+        {
+          "name": "AzureRM.Compute",
+          "version": "5.8.0"
+        },
+        {
+          "name": "AzureRM.Profile",
+          "version": "5.8.0"
+        },
+        {
+          "name": "AzureAD",
+          "version": "2.0.2.4"
+        }
+      ]
+    },
+    "windowsOSVersion": {
+      "value": "2016-Datacenter"
+    },
+    "databaseHost": {
+      "value": "Azure_SQL"
+    },
+    "skuName": {
+      "value": "S0"
     }
   }
 }
