@@ -5,7 +5,7 @@
 .DESCRIPTION
 	Downloads the latest CentreStack release and installs on the new machine
 .EXAMPLE
-    .\Install-CentreStack -Build 6033 -Modules 
+    .\Install-CentreStack -Build 6033 -Modules @(@{name = 'AzureRM.Compute'; version = '5.8.0'}, @{name = 'AzureRM.Profile'; version = '5.8.0'}, @{name = 'AzureAD'; version = '2.0.2.4'})
 .PARAMETER Build
     The build number to download and install
 .PARAMETER Modules
@@ -44,7 +44,7 @@ Param
 
 	[Parameter(
         Mandatory=$false,
-        ValueFromPipelineByPropertyName=$false,
+        ValueFromPipelineByPropertyName=$false
     )]
 	[array]$Modules
 )
