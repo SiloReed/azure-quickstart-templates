@@ -208,7 +208,8 @@
     "powerShell": {
       "script": "Install-CentreStack.ps1",
       "folder": "scripts",
-      "parameters": "[concat('-Verbose', ' -Build ', parameters('buildNumber'), ' -VaultName ', variables('kvName'), ' -Modules ', variables('modules'))]"
+      "parameters": "[concat('-Verbose', ' -Build ', parameters('buildNumber'), ' -VaultName ', variables('kvName'), ' -Modules ', variables('modules'))]",
+      "scriptMySQL": "Install-MySQL.ps1"
     },
     "customScriptExtName": "Install-CentreStack",
     "databaseName": "csmain",
@@ -681,8 +682,8 @@
         },
         "osProfile": {
           "computerName": "[parameters('vmName')]",
-          "adminVMUsername": "[parameters('adminVMUsername')]",
-          "adminVMPassword": "[parameters('adminVMPassword')]",
+          "adminUsername": "[parameters('adminVMUsername')]",
+          "adminPassword": "[parameters('adminVMPassword')]",
           "windowsConfiguration": {
             "provisionVMAgent": true,
             "enableAutomaticUpdates": true
@@ -840,7 +841,8 @@
         "autoUpgradeMinorVersion": true,
         "settings": {
           "fileUris": [
-            "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').script, parameters('_artifactsLocationSasToken'))]"
+            "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').script, parameters('_artifactsLocationSasToken'))]",
+            "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').scriptMySQL, parameters('_artifactsLocationSasToken'))]"
           ]
         },
         "publisher": "Microsoft.Compute",

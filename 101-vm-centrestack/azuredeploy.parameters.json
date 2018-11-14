@@ -2,7 +2,7 @@
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "adminUsername": {
+    "adminVMUsername": {
       "value": "csadmin"
     },
     "adminDBUsername": {
@@ -42,6 +42,10 @@
           "name": "AzureRM.Profile",
           "version": "5.8.0"
         },
+        {
+          "name": "AzureRM.KeyVault",
+          "version": "5.2.1"
+        },        
         {
           "name": "AzureAD",
           "version": "2.0.2.4"
