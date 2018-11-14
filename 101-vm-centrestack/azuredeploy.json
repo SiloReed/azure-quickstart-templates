@@ -16,6 +16,14 @@
       },
       "defaultValue": ""
     },
+    "buildNumber": {
+      "defaultValue": "6033",
+      "type": "string",
+      "minLength": 4,
+      "metadata": {
+        "description": "The CentreStack build number to download and install."
+      }
+    },
     "modules": {
       "type": "array",
       "metadata": {
@@ -195,7 +203,7 @@
     "powerShell": {
       "script": "Install-CentreStack.ps1",
       "folder": "scripts",
-      "parameters": "[concat('-Verbose ', ' -Modules ', variables('modules'))]"
+      "parameters": "[concat('-Verbose', ' -Build ', parameters('buildNumber'), ' -Modules ', variables('modules'))]"
     },
     "customScriptExtName": "Install-CentreStack",
     "databaseName": "csmain",
@@ -941,6 +949,10 @@
     "sqldbconnstr": {
       "type": "object",
       "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))), json('null'))]"
-    }
+    },
+    "scriptoutput": {
+      "type": "string",
+      "value": "[reference(concat('Microsoft.Compute/virtualMachines/', parameters('vmName'), '/extensions/', variables('customScriptExtName')).instanceView.substatuses[0].message)]"
+     }
   }
 }

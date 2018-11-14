@@ -1,12 +1,69 @@
 # Downloads the latest CentreStack release and installs on the new machine
+<#
+.Synopsis
+    Downloads the latest CentreStack release and installs on the new machine
+.DESCRIPTION
+	Downloads the latest CentreStack release and installs on the new machine
+.EXAMPLE
+    .\Install-CentreStack -Build 6033 -Modules 
+.PARAMETER Build
+    The build number to download and install
+.PARAMETER Modules
+    An array of hashtables specifying the name and version of PowerShell modules that will be installed
+.NOTES 
+    Author: Jeff Reed
+    Name: Upgrade-CentreStack.ps1
+    Created: 2018-11-14
+    
+#>
+#Requires -Version 5.1
+#Requires -RunAsAdministrator
+
 
 # Enable -Verbose option
+#region script parameters
 [CmdletBinding()]
 Param
 (
-	[Parameter(Mandatory=$true)]
+    [Parameter(
+        Mandatory=$true,
+        ValueFromPipelineByPropertyName=$false,
+        HelpMessage="The build to download and install."
+    )]
+    [ValidateScript({
+        # Check to ensure string argument is actually all digits
+        If ($_ -match "\d+") {
+            $True
+        }
+        else {
+            Throw "'$_' is not a valid build number."
+        }
+    })]        
+    [String]
+    $Build,
+
+	[Parameter(
+        Mandatory=$false,
+        ValueFromPipelineByPropertyName=$false,
+    )]
 	[array]$Modules
 )
+#endregion script parameters
+
+#region functions
+function Disable-InternetExplorerESC {
+    $AdminKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}"
+    $UserKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}"
+    Set-ItemProperty -Path $AdminKey -Name "IsInstalled" -Value 0
+    Set-ItemProperty -Path $UserKey -Name "IsInstalled" -Value 0
+    Stop-Process -Name Explorer
+    Write-Verbose "IE Enhanced Security Configuration (ESC) has been disabled." 
+} #end function Disable-InternetExplorerESC
+#endregion functions
+
+#region Script Body
+# Disable Internet Explorer Enhanced Security Configuration
+Disable-InternetExplorerESC
 
 # Install NuGet package provider
 Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
@@ -53,3 +110,6 @@ Add-AzureRmAccount -identity
 $vmInfoPs = Get-AzureRMVM -ResourceGroupName $compute.resourceGroupName -Name $compute.name
 $spID = $vmInfoPs.Identity.PrincipalId
 Write-Output ("The managed identity for Azure resources service principal ID is {0}" -f $spID)
+
+Write-Output ("Installing CentreStack build number {0}" -f $Build)
+#endregion Script Body
