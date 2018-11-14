@@ -63,10 +63,15 @@ Param
 
 #region functions
 function Disable-InternetExplorerESC {
-    $AdminKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}"
-    $UserKey = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}"
-    Set-ItemProperty -Path $AdminKey -Name "IsInstalled" -Value 0
-    Set-ItemProperty -Path $UserKey -Name "IsInstalled" -Value 0
+    Rundll32 iesetup.dll, IEHardenLMSettings,1,True
+    Rundll32 iesetup.dll, IEHardenUser,1,True
+    Rundll32 iesetup.dll, IEHardenAdmin,1,True
+    $regKeys = @()
+    $regKeys += "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}"
+    $regKeys += "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}"
+    foreach ($regKey in $regKeys) {
+        Set-ItemProperty -Path $regKey -Name "IsInstalled" -Value 0
+    }
     Out-Log -Level Info -Message ("IE Enhanced Security Configuration (ESC) has been disabled." )
 } #end function Disable-InternetExplorerESC
 
