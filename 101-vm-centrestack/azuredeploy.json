@@ -142,7 +142,7 @@
     },
     "databaseHost": {
       "type": "string",
-      "defaultValue": "Azure_SQL",
+      "defaultValue": "Local",
       "allowedValues": [
         "Local",
         "Azure_SQL",
