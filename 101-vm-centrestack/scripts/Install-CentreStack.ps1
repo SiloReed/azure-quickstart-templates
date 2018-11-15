@@ -65,13 +65,13 @@ function Disable-InternetExplorerESC {
     Rundll32 iesetup.dll, IEHardenLMSettings,1,True
     Rundll32 iesetup.dll, IEHardenUser,1,True
     Rundll32 iesetup.dll, IEHardenAdmin,1,True
-    $regKeys = @()
-    $regKeys += "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}"
-    $regKeys += "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}"
-    foreach ($regKey in $regKeys) {
-        Set-ItemProperty -Path $regKey -Name "IsInstalled" -Value 0
-    }
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0
     Out-Log -Level Info -Message ("IE Enhanced Security Configuration (ESC) has been disabled." )
+
+    Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 1
+    Out-Log -Level Info -Message ("IE 'Prevent running First Run wizard' policy is enabled." )
+
 } #end function Disable-InternetExplorerESC
 
 function Out-Log {
@@ -117,12 +117,12 @@ function Out-Log {
         # Only log and output if script is called with -Verbose common parameter
         if ( $VerbosePreference -ne [System.Management.Automation.ActionPreference]::SilentlyContinue ) {
             Write-Output $s
-            Write-Output $s | Out-File -FilePath $script:log -Encoding utf8 -Append
+            Write-Output $s | Out-File -FilePath $global:log -Encoding utf8 -Append
         }
     } 
     else {
         Write-Output $s
-        Write-Output $s | Out-File -FilePath $script:log -Encoding utf8 -Append
+        Write-Output $s | Out-File -FilePath $global:log -Encoding utf8 -Append
     }
 } #end function Out-Log
 
@@ -153,8 +153,8 @@ if ((Test-Path $logDir) -eq $FALSE) {
 
 # The new logfile will be created every day
 $logdate = get-date -format "yyyy-MM-dd"
-$log = Join-Path $logDir ($scriptBaseName +"_" + $logdate + ".log")
-Write-Output "Log file: $log"
+$global:log = Join-Path $logDir ($scriptBaseName +"_" + $logdate + ".log")
+Write-Output ("Log file: {0}" -f $global:log)
 
 Out-Log -Level Info -Message ("{0} script started on {1}" -f $scriptName, $env:COMPUTERNAME)
 
