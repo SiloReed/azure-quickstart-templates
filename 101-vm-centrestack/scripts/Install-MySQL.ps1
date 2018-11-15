@@ -81,8 +81,9 @@ function Install-Product {
     }
     
     $m = Measure-Command {$proc = Start-Process -FilePath $exePath  -ArgumentList $argList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru }
-    Write-Verbose ("MySQLInstaller completed in: {0:g}" -f $m)
-    Write-Verbose ("MySQLInstaller exit code: {0}" -f $proc.ExitCode)
+    Out-Log -Level Verbose -Message ("MySQLInstaller completed in: {0:g}" -f $m)
+    
+    Out-Log -Level Verbose -Message ("MySQLInstaller exit code: {0}" -f $proc.ExitCode)
     if ($proc.ExitCode -ne 0) {
         Get-Content $fileErrLog
         Throw $proc.ExitCode
@@ -126,20 +127,20 @@ function Install-VCRuntime {
     $outputFile = Join-Path $downloadsFolder $fileName
 
     # Download and install 
-    Write-Verbose ("Downloading {0} ..." -f $URI)
+    Out-Log -Level Verbose -Message ("Downloading {0} ..." -f $URI)
     $progressPreference = 'silentlyContinue'
     try {
         $m = Measure-Command {Invoke-WebRequest -Uri $URI -OutFile $outputFile}
     }
     catch {
-        Write-Warning ("An error occurred while downloading {0}" -f $URI)
+        Out-Log -Level Warn -Message ("An error occurred while downloading {0}" -f $URI)
         Throw $_.exception.message
     }
     $progressPreference = 'Continue'
-    Write-Verbose ("Completed download in: {0:g}" -f $m)
+    Out-Log -Level Verbose -Message ("Completed download in: {0:g}" -f $m)
     $argList = @('/install', '/passive', '/norestart')
     $m = Measure-Command {Start-Process -FilePath $outputFile -ArgumentList $argList -Wait}
-    Write-Verbose ("'{0}' installation completed in: {1:g}" -f $Name, $m)
+    Out-Log -Level Verbose -Message ("'{0}' installation completed in: {1:g}" -f $Name, $m)
 
 } # end function Install-VCRuntime
 
@@ -172,9 +173,10 @@ function Start-Command {
 
     $fileErrLog = Join-Path $env:TEMP ("{0}_StdErr.log" -f $Action)
     $fileOutputLog = Join-Path $env:TEMP ("{0}_StdOut.log" -f $Action)
-
-    $m = Measure-Command {$proc = Start-Process -FilePath $Path  -ArgumentList $ArgList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru }
-    Write-Verbose ("mysqld install exit code: {0}" -f $proc.ExitCode)
+    
+    Out-Log -Level Verbose -Message ("Executing: {0} {1}" -f $Path, $ArgList.Split(" "))
+    $m = Measure-Command {$proc = Start-Process -FilePath $Path -ArgumentList $ArgList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru }
+    Out-Log -Level Verbose -Message ("mysqld install exit code: {0}" -f $proc.ExitCode)
     if ($proc.ExitCode -ne 0) {
         Get-Content $fileErrLog
     } else {
@@ -277,7 +279,7 @@ if ($osArchitecture -eq '64-bit') {
         $platform = "x64"
     }
     else {
-        Write-Warning "This script is not supported in a 32-bit PowerShell session on 64-bit Windows. Please execute this script within a 64-bit PowerShell session."
+        Out-Log -Level Warn -Message "This script is not supported in a 32-bit PowerShell session on 64-bit Windows. Please execute this script within a 64-bit PowerShell session."
         Exit 1
     }
 } 
@@ -316,20 +318,20 @@ $uriMySQL = 'https://cdn.mysql.com//Downloads/MySQLInstaller/mysql-installer-web
 
 $fileName = $uriMySQL.Split('/') | Select-Object -Last 1
 $outputFile = Join-Path $downloadsFolder $fileName
-Write-Verbose ("Downloading {0} ..." -f $uriMySQL)
+Out-Log -Level Verbose -Message ("Downloading {0} ..." -f $uriMySQL)
 $progressPreference = 'silentlyContinue'
 try {
     $m = Measure-Command {Invoke-WebRequest -Uri $uriMySQL -OutFile $outputFile}
 }
 catch {
-    Write-Warning ("An error occurred while downloading {0}" -f $uriCSUpgrade)
+    Out-Log -Level Warn -Message ("An error occurred while downloading {0}" -f $uriCSUpgrade)
     Throw $_.exception.message
 }
 $progressPreference = 'Continue'
-Write-Verbose ("Completed download in: {0:g}" -f $m)
+Out-Log -Level Verbose -Message ("Completed download in: {0:g}" -f $m)
 $argList = @('/i', $outputFile, '/passive')
 $m = Measure-Command {Start-Process -FilePath msiexec.exe -ArgumentList $argList -Wait}
-Write-Verbose ("MySQLInstaller installation completed in: {0:g}" -f $m)
+Out-Log -Level Verbose -Message ("MySQLInstaller installation completed in: {0:g}" -f $m)
 
 Install-Product -Product "Server"
 
@@ -439,5 +441,5 @@ Start-Command @htParams
 
 # Stop the stopwatch
 $swScript.Stop()
-Write-Output ("`nScript completed in: {0:g}" -f $swScript.Elapsed)
+Out-Log -Level Info -Message ("`nScript completed in: {0:g}" -f $swScript.Elapsed)
 #endregion Script Body

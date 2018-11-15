@@ -22,7 +22,6 @@
 #Requires -RunAsAdministrator
 
 
-# Enable -Verbose option
 #region script parameters
 [CmdletBinding()]
 Param
@@ -215,7 +214,8 @@ $adminDBPassword = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'a
 $databaseHost = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'databaseHost').SecretValueText
 switch ($databaseHost) {
     "Local" { .\Install-MySQL }
-    "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL"}
-    "Azure_MySQL" { Out-Log -Level Info -Message "Using Azure MySQL"}
+    "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
+    "Azure_MySQL" { Out-Log -Level Info -Message "Using Azure MySQL."}
+    "None" {Out-Log -Level Info -Message "No database specified."}
 }
 #endregion Script Body
