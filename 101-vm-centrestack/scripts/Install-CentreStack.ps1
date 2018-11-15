@@ -27,49 +27,53 @@
 Param
 (
     [Parameter(
-        Mandatory=$true,
-        ValueFromPipelineByPropertyName=$false,
-        HelpMessage="The build to download and install."
+        Mandatory = $true,
+        ValueFromPipelineByPropertyName = $false,
+        HelpMessage = "The build to download and install."
     )]
-    [ValidateScript({
-        # Check to ensure string argument is actually all digits
-        If ($_ -match "\d+") {
-            $True
-        }
-        else {
-            Throw "'$_' is not a valid build number."
-        }
-    })]        
+    [ValidateScript( {
+            # Check to ensure string argument is actually all digits
+            If ($_ -match "\d+") {
+                $True
+            }
+            else {
+                Throw "'$_' is not a valid build number."
+            }
+        })]        
     [String]
     $Build,
 
     [Parameter(
-        Mandatory=$true,
-        ValueFromPipelineByPropertyName=$false,
-        HelpMessage="The name of the Azure Key Vault containing secrets for this script."
+        Mandatory = $true,
+        ValueFromPipelineByPropertyName = $false,
+        HelpMessage = "The name of the Azure Key Vault containing secrets for this script."
     )]
     [ValidateNotNullOrEmpty()]
     [String]
     $VaultName,
 
-	[Parameter(
-        Mandatory=$false,
-        ValueFromPipelineByPropertyName=$false
+    [Parameter(
+        Mandatory = $false,
+        ValueFromPipelineByPropertyName = $false
     )]
-	[array]$Modules
+    [array]$Modules
 )
 #endregion script parameters
 
 #region functions
 function Disable-InternetExplorerESC {
-    Rundll32 iesetup.dll, IEHardenLMSettings,1,True
-    Rundll32 iesetup.dll, IEHardenUser,1,True
-    Rundll32 iesetup.dll, IEHardenAdmin,1,True
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0
+    # Disable IE ESC
+    Rundll32 iesetup.dll, IEHardenLMSettings, 1, True
+    Rundll32 iesetup.dll, IEHardenUser, 1, True
+    Rundll32 iesetup.dll, IEHardenAdmin, 1, True
+    Update-RegVal -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A7-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0 -Type "Dword"
+    Update-RegVal -Path "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\{A509B1A8-37EF-4b3f-8CFC-4F3A74704073}" -Name "IsInstalled" -Value 0 -Type "Dword"
     Out-Log -Level Info -Message ("IE Enhanced Security Configuration (ESC) has been disabled." )
 
-    Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 1
+    # Disable first run wizard
+    New-Key -KeyPath "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer"
+    New-Key -KeyPath "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main"
+    Update-RegVal -Path "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 1 -Type "Dword"
     Out-Log -Level Info -Message ("IE 'Prevent running First Run wizard' policy is enabled." )
 
 } #end function Disable-InternetExplorerESC
@@ -95,17 +99,17 @@ function Out-Log {
     [CmdletBinding()]
     param (
         [Parameter (
-            Position=0, 
-            Mandatory=$true,
-            ValueFromPipeline=$False,
-            ValueFromPipelineByPropertyName=$False
+            Position = 0, 
+            Mandatory = $true,
+            ValueFromPipeline = $False,
+            ValueFromPipelineByPropertyName = $False
         ) ]
         [string] $Message,
         [Parameter (
-            Position=1, 
-            Mandatory=$false,
-            ValueFromPipeline=$False,
-            ValueFromPipelineByPropertyName=$False
+            Position = 1, 
+            Mandatory = $false,
+            ValueFromPipeline = $False,
+            ValueFromPipelineByPropertyName = $False
         ) ]
         [ValidateSet("Info", "Warn", "Error", "Verbose")]
         [string] $Level = "Info"
@@ -126,6 +130,73 @@ function Out-Log {
     }
 } #end function Out-Log
 
+function New-RegKey {
+    <#
+    .SYNOPSIS
+        Creates registry key if it does not exist
+    .DESCRIPTION
+        Creates registry key if it does not exist
+    .EXAMPLE
+        New-Key -KeyPath "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug"
+    .PARAMETER KeyPath
+        The registry key that will be created if it does not exist
+    #>
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $false)]
+        [string] $KeyPath
+    )
+
+    # Creates registry key if it does not exist
+    if (-not (Test-Path $KeyPath)) {
+        New-Item $KeyPath -Verbose | Out-Null
+    } 
+} # end function New-RegKey
+
+function Update-RegVal {
+    <#
+    .SYNOPSIS
+        Updates an existing registry value or creates a new value if it doesn't exist
+    .DESCRIPTION
+        Updates an existing registry value or creates a new value if it doesn't exist
+    .EXAMPLE
+        Update-RegVal -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AeDebug" -Name "Auto" -Value "1" -Type "String"
+    .PARAMETER Path
+        The registry key 
+    .PARAMETER Name
+        The name of the registry value
+    .PARAMETER Value
+        The value data of the registry value
+    .PARAMETER Type
+        The data type, either DWORD or String
+    #>
+    [CmdletBinding()]
+    Param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $false)]
+        [string] $Path,
+        
+        [Parameter(Mandatory = $true, ValueFromPipeline = $false)]
+        [string] $Name,
+        
+        [Parameter(Mandatory = $true, ValueFromPipeline = $false)] 
+        [string] $Value,
+        
+        [Parameter(Mandatory = $true, ValueFromPipeline = $false)]
+        [ValidateSet("DWord", "String")]
+        [string] $Type
+
+    )    
+ 
+    $key = Get-Item -LiteralPath $Path
+    if ($null -eq $key.GetValue($Name, $null)) {
+        # Create the value as it doesn't currently exist
+        New-ItemProperty -path $Path -name $Name -value $Value -PropertyType $Type -Verbose | Out-Null
+    }
+    else {
+        # Value exists, update it
+        Set-ItemProperty -path $Path -name $Name -value $Value -Verbose
+    }
+} # end function Update-RegVal
 
 #endregion functions
 
@@ -153,7 +224,7 @@ if ((Test-Path $logDir) -eq $FALSE) {
 
 # The new logfile will be created every day
 $logdate = get-date -format "yyyy-MM-dd"
-$global:log = Join-Path $logDir ($scriptBaseName +"_" + $logdate + ".log")
+$global:log = Join-Path $logDir ($scriptBaseName + "_" + $logdate + ".log")
 Write-Output ("Log file: {0}" -f $global:log)
 
 Out-Log -Level Info -Message ("{0} script started on {1}" -f $scriptName, $env:COMPUTERNAME)
@@ -171,12 +242,12 @@ Foreach ($Module in $Modules) {
 }
 
 # Remove old default modules and install new versions
-$DefaultModules = @("PowerShellGet", "PackageManagement","Pester")
+$DefaultModules = @("PowerShellGet", "PackageManagement", "Pester")
 Foreach ($Module in $DefaultModules) {
-	if ($tmp = Get-Module $Module -ErrorAction SilentlyContinue) {	
+    if ($tmp = Get-Module $Module -ErrorAction SilentlyContinue) {	
         Remove-Module $Module -Force	
     }
-	Find-Module -Name $Module -Repository PSGallery -Verbose | Install-Module -Force -Confirm:$false -SkipPublisherCheck -Verbose
+    Find-Module -Name $Module -Repository PSGallery -Verbose | Install-Module -Force -Confirm:$false -SkipPublisherCheck -Verbose
 }
 
 # Uninstalling old Azure PowerShell Modules
@@ -189,17 +260,17 @@ if ($null -ne $app) {
 
 # Get the OAuth2 token for the virtual machine's managed identity allowing it to query the Azure Management REST APIs
 $uri = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F'
-$response = Invoke-WebRequest -Uri $uri -Method GET -Headers @{Metadata="true"}
+$response = Invoke-WebRequest -Uri $uri -Method GET -Headers @{Metadata = "true"}
 $content = $response.Content | ConvertFrom-Json
 $accessToken = $content.access_token
 
 # Use the Azure instance Metadata to get information about this instance
-$compute = Invoke-RestMethod -Headers @{"Metadata"="true"} -URI http://169.254.169.254/metadata/instance/compute?api-version=2017-08-01 -Method get
-$publicIP = Invoke-RestMethod -Headers @{"Metadata"="true"} -URI "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-08-01&format=text" -Method Get
+$compute = Invoke-RestMethod -Headers @{"Metadata" = "true"} -URI http://169.254.169.254/metadata/instance/compute?api-version=2017-08-01 -Method get
+$publicIP = Invoke-RestMethod -Headers @{"Metadata" = "true"} -URI "http://169.254.169.254/metadata/instance/network/interface/0/ipv4/ipAddress/0/publicIpAddress?api-version=2017-08-01&format=text" -Method Get
 
 # Demonstrates how to get information from the Azure REST API for this instance.
 $uri = ("https://management.azure.com/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Compute/virtualMachines/{2}?api-version=2017-12-01" -f $compute.subscriptionId, $compute.resourceGroupName, $compute.name)
-$vmInfoRest = (Invoke-WebRequest -Uri $uri  -Method GET -ContentType "application/json" -Headers @{ Authorization ="Bearer $accessToken"}).content | ConvertFrom-JSON
+$vmInfoRest = (Invoke-WebRequest -Uri $uri  -Method GET -ContentType "application/json" -Headers @{ Authorization = "Bearer $accessToken"}).content | ConvertFrom-JSON
 Out-Log -Level Info -Message ("Instance ID is: {0}" -f $vmInfoRest.id)
 
 # Sign into AzureRM using managed identity
