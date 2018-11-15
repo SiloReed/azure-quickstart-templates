@@ -192,7 +192,7 @@
     "publicIPAddressType": "Static",
     "addressPrefix": "10.0.0.0/16",
     "subnetPrefix": "10.0.0.0/24",
-    "asgId": "[resourceId('Microsoft.Network/applicationSecurityGroups',variables('asgName'))]",
+    "asgId": "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]",
     "nsgRuleNames": {
       "rdp": "AllowRDPToCentreStack",
       "http": "AllowHTTPToCentreStack",
@@ -264,7 +264,7 @@
               "privateIPAddressVersion": "IPv4",
               "applicationSecurityGroups": [
                 {
-                  "id": "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]"
+                  "id": "[variables('asgID')]"
                 }
               ]
             }
@@ -285,7 +285,7 @@
       "dependsOn": [
         "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]",
         "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnetName'))]",
-        "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]",
+        "[variables('asgID')]",
         "[resourceId('Microsoft.Network/networkSecurityGroups', variables('nsgName'))]"
       ]
     },
@@ -480,7 +480,7 @@
         ]
       },
       "dependsOn": [
-        "[resourceId('Microsoft.Network/applicationSecurityGroups', variables('asgName'))]"
+        "[variables('asgID')]"
       ]
     },
     {
@@ -1041,8 +1041,8 @@
       "value": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
     },
     "database": {
-      "type": "object",
-      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), reference(concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))), 'all-in-one')]"
+      "type": "string",
+      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName')), 'all-in-one')]"
     }
   }
 }
