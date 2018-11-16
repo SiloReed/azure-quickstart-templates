@@ -174,7 +174,7 @@ function Start-Command {
     $fileErrLog = Join-Path $env:TEMP ("{0}_StdErr.log" -f $Action)
     $fileOutputLog = Join-Path $env:TEMP ("{0}_StdOut.log" -f $Action)
     
-    Out-Log -Level Verbose -Message ("Executing: {0} {1}" -f $Path, $ArgList.Split(" "))
+    Out-Log -Level Verbose -Message ("Executing: {0} {1}" -f $Path, [string] $ArgList)
     $m = Measure-Command {$proc = Start-Process -FilePath $Path -ArgumentList $ArgList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru }
     Out-Log -Level Verbose -Message ("mysqld install exit code: {0}" -f $proc.ExitCode)
     if ($proc.ExitCode -ne 0) {
