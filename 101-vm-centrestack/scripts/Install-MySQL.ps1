@@ -87,7 +87,7 @@ function Install-Product {
         catch {
             $FailedItem = $_.Exception.ItemName
             $ErrorMessage = $_.Exception.Message
-            Out-Log -Level Warn -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $exePath, $FailedItem, $ErrorMessage)
+            Out-Log -Level Error -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $exePath, $FailedItem, $ErrorMessage)
             Throw $ErrorMessage
         }
     }
@@ -144,10 +144,10 @@ function Install-VCRuntime {
             Invoke-WebRequest -Uri $URI -OutFile $outputFile
         }
         catch {
-            $ErrorMessage = $_.Exception.Message
             $FailedItem = $_.Exception.ItemName
-            Out-Log -Level Warn -Message ("An error occurred while downloading {0}. Failed item: {1}. Exception Message: {2}" -f $URI, $FailedItem, $ErrorMessage)
-            Throw $_.exception.message
+            $ErrorMessage = $_.Exception.Message
+            Out-Log -Level Error -Message ("An error occurred while downloading {0}. Failed item: {1}. Exception Message: {2}" -f $URI, $FailedItem, $ErrorMessage)
+            Throw $ErrorMessage
         }
     }
     $progressPreference = 'Continue'
@@ -161,10 +161,10 @@ function Install-VCRuntime {
             Start-Process -FilePath $outputFile -ArgumentList $argList -Wait -Verbose
         }
         catch {
-            $ErrorMessage = $_.Exception.Message
             $FailedItem = $_.Exception.ItemName
-            Out-Log -Level Warn -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $outputFile, $FailedItem, $ErrorMessage)
-            Throw $_.exception.message
+            $ErrorMessage = $_.Exception.Message
+            Out-Log -Level Error -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $outputFile, $FailedItem, $ErrorMessage)
+            Throw $ErrorMessage
         }
     }
 
@@ -208,10 +208,10 @@ function Start-Command {
             $proc = Start-Process -FilePath $Path -ArgumentList $ArgList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru -Verbose
         }
         catch {
-            $ErrorMessage = $_.Exception.Message
             $FailedItem = $_.Exception.ItemName
-            Out-Log -Level Warn -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $Path, $FailedItem, $ErrorMessage)
-            Throw $_.exception.message
+            $ErrorMessage = $_.Exception.Message
+            Out-Log -Level Error -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $Path, $FailedItem, $ErrorMessage)
+            Throw $ErrorMessage
         }
  
     }
@@ -336,6 +336,8 @@ Write-Output ("Log file: {0}" -f $script:log)
 
 # Get the user's Documents folder for output files
 $myDocs = Join-Path $env:UserProfile "Documents"
+Out-Log -Level Info -Message ("Documents directory is '{0}'" -f $myDocs)
+Out-Log -Level Info -Message ("Temp directory is '{0}'" -f $env:TEMP)
 
 # This will return '32-bit' or '64-bit'
 $osArchitecture = (Get-WmiObject -Class Win32_OperatingSystem).OSArchitecture
@@ -346,8 +348,9 @@ if ($osArchitecture -eq '64-bit') {
         $platform = "x64"
     }
     else {
-        Out-Log -Level Warn -Message "This script is not supported in a 32-bit PowerShell session on 64-bit Windows. Please execute this script within a 64-bit PowerShell session."
-        Exit 1
+        $m = "This script is not supported in a 32-bit PowerShell session on 64-bit Windows. Please execute this script within a 64-bit PowerShell session."
+        Out-Log -Level Error -Message $m
+        Throw $m
     }
 } 
 else {
@@ -392,10 +395,10 @@ $m = Measure-Command {
         Invoke-WebRequest -Uri $uriMySQL -OutFile $outputFile
     }
     catch {
+        $FailedItem = $_.Exception.ItemName 
         $ErrorMessage = $_.Exception.Message
-        $FailedItem = $_.Exception.ItemName        
-        Out-Log -Level Warn -Message ("An error occurred while downloading {0} to {1}. Failed item: {2}. Exception Message: {3}" -f $uriMySQL, $outputFile, $FailedItem, $ErrorMessage)
-        Throw $_.exception.message
+        Out-Log -Level Error -Message ("An error occurred while downloading {0} to {1}. Failed item: {2}. Exception Message: {3}" -f $uriMySQL, $outputFile, $FailedItem, $ErrorMessage)
+        Throw $ErrorMessage
     }
 }
 
