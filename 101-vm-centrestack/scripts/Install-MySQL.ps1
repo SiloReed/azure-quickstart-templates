@@ -82,7 +82,7 @@ function Install-Product {
     
     $m = Measure-Command {
         try {
-            $proc = Start-Process -FilePath $exePath -ArgumentList $argList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru 
+            $proc = Start-Process -FilePath $exePath -ArgumentList $argList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru -Verbose 
         }
         catch {
             $ErrorMessage = $_.Exception.Message
@@ -155,7 +155,7 @@ function Install-VCRuntime {
     $argList = @('/install', '/passive', '/norestart')
     $m = Measure-Command {
         try {
-            Start-Process -FilePath $outputFile -ArgumentList $argList -Wait
+            $proc = Start-Process -FilePath $outputFile -ArgumentList $argList -Wait -Verbose
         }
         catch {
             $ErrorMessage = $_.Exception.Message
@@ -164,7 +164,7 @@ function Install-VCRuntime {
             Throw $_.exception.message
         }
     }
-    Out-Log -Level Verbose -Message ("'{0}' installation completed in: {1:g}" -f $Name, $m)
+    Out-Log -Level Verbose -Message ("'{0}' installation completed in: {1:g} with exit code: {2}" -f $outputFile, $m, $proc.ExitCode)
 
 } # end function Install-VCRuntime
 
@@ -201,7 +201,7 @@ function Start-Command {
     Out-Log -Level Verbose -Message ("Executing: {0} {1}" -f $Path, [string] $ArgList)
     $m = Measure-Command {
         try {
-            $proc = Start-Process -FilePath $Path -ArgumentList $ArgList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru 
+            $proc = Start-Process -FilePath $Path -ArgumentList $ArgList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru -Verbose
         }
         catch {
             $ErrorMessage = $_.Exception.Message
@@ -372,7 +372,7 @@ Out-Log -Level Verbose -Message ("Completed download in: {0:g}" -f $m)
 $argList = @('/i', $outputFile, '/passive')
 $m = Measure-Command {
     try {
-        Start-Process -FilePath msiexec.exe -ArgumentList $argList -Wait
+        $proc = Start-Process -FilePath msiexec.exe -ArgumentList $argList -Wait -Verbose
     }
     catch {
         $ErrorMessage = $_.Exception.Message
@@ -381,7 +381,7 @@ $m = Measure-Command {
         Throw $_.exception.message
     }
 }
-Out-Log -Level Verbose -Message ("MySQLInstaller installation completed in: {0:g}" -f $m)
+Out-Log -Level Verbose -Message ("MySQLInstaller installation completed in: {0:g} with exit code {1}" -f $m, $proc.ExitCode)
 
 Install-Product -Product "Server"
 
