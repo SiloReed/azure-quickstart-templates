@@ -71,8 +71,8 @@ function Disable-InternetExplorerESC {
     Out-Log -Level Info -Message ("IE Enhanced Security Configuration (ESC) has been disabled." )
 
     # Disable first run wizard
-    New-Key -KeyPath "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer"
-    New-Key -KeyPath "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main"
+    New-RegKey -KeyPath "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer"
+    New-RegKey -KeyPath "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main"
     Update-RegVal -Path "HKLM:\SOFTWARE\Policies\Microsoft\Internet Explorer\Main" -Name "DisableFirstRunCustomize" -Value 1 -Type "Dword"
     Out-Log -Level Info -Message ("IE 'Prevent running First Run wizard' policy is enabled." )
 
