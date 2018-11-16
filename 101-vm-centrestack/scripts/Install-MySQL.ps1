@@ -85,10 +85,10 @@ function Install-Product {
             $proc = Start-Process -FilePath $exePath -ArgumentList $argList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru -Verbose 
         }
         catch {
-            $ErrorMessage = $_.Exception.Message
             $FailedItem = $_.Exception.ItemName
+            $ErrorMessage = $_.Exception.Message
             Out-Log -Level Warn -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $exePath, $FailedItem, $ErrorMessage)
-            Throw $_.exception.message
+            Throw $ErrorMessage
         }
     }
     Out-Log -Level Verbose -Message ("MySQLInstaller completed in: {0:g}" -f $m)
@@ -152,10 +152,13 @@ function Install-VCRuntime {
     }
     $progressPreference = 'Continue'
     Out-Log -Level Verbose -Message ("Completed download in: {0:g}" -f $m)
+
+    $fileErrLog = Join-Path $env:TEMP ("{0}_StdErr.log" -f $fileBaseName)
+    $fileOutputLog = Join-Path $env:TEMP ("{0}_StdOut.log" -f $fileBaseName)
     $argList = @('/install', '/passive', '/norestart')
     $m = Measure-Command {
         try {
-            $proc = Start-Process -FilePath $outputFile -ArgumentList $argList -Wait -Verbose
+            Start-Process -FilePath $outputFile -ArgumentList $argList -Wait -Verbose
         }
         catch {
             $ErrorMessage = $_.Exception.Message
@@ -164,7 +167,8 @@ function Install-VCRuntime {
             Throw $_.exception.message
         }
     }
-    Out-Log -Level Verbose -Message ("'{0}' installation completed in: {1:g} with exit code: {2}" -f $outputFile, $m, $proc.ExitCode)
+
+    Out-Log -Level Verbose -Message ("'{0}' installation completed in: {1:g}." -f $outputFile, $m)
 
 } # end function Install-VCRuntime
 
@@ -299,6 +303,34 @@ sync_relay_log_info=10000
 # Start a stopwatch to time the entire script execution
 $swScript = [System.Diagnostics.Stopwatch]::StartNew()
 
+# Enable verbose output
+$VerbosePreference = "Continue"
+
+# Get this script
+$ThisScript = $Script:MyInvocation.MyCommand
+# Get the directory of this script
+$scriptDir = Split-Path $ThisScript.Path -Parent
+# Get the script file
+$scriptFile = Get-Item $ThisScript.Path
+# Get the name of this script
+$scriptName = $scriptFile.Name
+# Get the name of the script less the extension
+$scriptBaseName = $scriptFile.BaseName
+
+# Define folder where log files are written
+$logDir = Join-Path $scriptDir "Logs"
+if ((Test-Path $logDir) -eq $FALSE) {
+    New-Item $logDir -type directory | Out-Null
+}
+
+# The new logfile will be created every day
+$logdate = Get-Date -f "yyyy-MM-dd_HH-mm-ss"
+$script:log = Join-Path $logDir ($scriptBaseName + "_" + $logdate + ".log")
+Write-Output ("Log file: {0}" -f $script:log)
+
+. (Join-Path $scriptDir "Common-Functions.ps1")
+
+
 # Force TLSv1.2 else Invoke-WebRequest may throw "The underlying connection was closed: An unexpected error occurred on a send."
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -372,16 +404,17 @@ Out-Log -Level Verbose -Message ("Completed download in: {0:g}" -f $m)
 $argList = @('/i', $outputFile, '/passive')
 $m = Measure-Command {
     try {
-        $proc = Start-Process -FilePath msiexec.exe -ArgumentList $argList -Wait -Verbose
+        Start-Process -FilePath msiexec.exe -ArgumentList $argList -Wait -Verbose
     }
     catch {
-        $ErrorMessage = $_.Exception.Message
         $FailedItem = $_.Exception.ItemName
-        Out-Log -Level Warn -Message ("An error occurred while executing msiexec.exe. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
-        Throw $_.exception.message
+        $ErrorMessage = $_.Exception.Message
+        Out-Log -Level Error -Message ("An error occurred while executing msiexec.exe. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
+        Throw $ErrorMessage
     }
 }
-Out-Log -Level Verbose -Message ("MySQLInstaller installation completed in: {0:g} with exit code {1}" -f $m, $proc.ExitCode)
+
+Out-Log -Level Verbose -Message ("MySQLInstaller installation completed in: {0:g}" -f $m)
 
 Install-Product -Product "Server"
 
