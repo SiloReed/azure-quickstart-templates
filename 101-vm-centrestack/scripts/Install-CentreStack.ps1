@@ -223,7 +223,7 @@ if ((Test-Path $logDir) -eq $FALSE) {
 }
 
 # The new logfile will be created every day
-$logdate = get-date -format "yyyy-MM-dd"
+$logdate = Get-Date -f "yyyy-MM-dd_HH-mm-ss"
 $global:log = Join-Path $logDir ($scriptBaseName + "_" + $logdate + ".log")
 Write-Output ("Log file: {0}" -f $global:log)
 
