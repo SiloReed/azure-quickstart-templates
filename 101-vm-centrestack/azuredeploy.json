@@ -210,7 +210,8 @@
       "script": "Install-CentreStack.ps1",
       "folder": "scripts",
       "parameters": "[concat('-Verbose', ' -Build ', parameters('buildNumber'), ' -VaultName ', variables('kvName'), ' -Modules ', variables('modules'))]",
-      "scriptMySQL": "Install-MySQL.ps1"
+      "scriptMySQL": "Install-MySQL.ps1",
+      "scriptCommonFunctions": "Common-Functions.ps1"
     },
     "customScriptExtName": "Install-CentreStack",
     "databaseName": "csmain",
@@ -843,7 +844,8 @@
         "settings": {
           "fileUris": [
             "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').script, parameters('_artifactsLocationSasToken'))]",
-            "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').scriptMySQL, parameters('_artifactsLocationSasToken'))]"
+            "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').scriptMySQL, parameters('_artifactsLocationSasToken'))]",
+            "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').scriptCommonFunctions, parameters('_artifactsLocationSasToken'))]"
           ]
         },
         "publisher": "Microsoft.Compute",
