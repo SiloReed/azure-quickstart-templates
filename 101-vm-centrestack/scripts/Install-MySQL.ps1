@@ -80,7 +80,17 @@ function Install-Product {
         $exePath = "C:\Program Files\MySQL\MySQL Installer for Windows\MySQLInstallerConsole.exe"
     }
     
-    $m = Measure-Command {$proc = Start-Process -FilePath $exePath  -ArgumentList $argList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru }
+    $m = Measure-Command {
+        try {
+            $proc = Start-Process -FilePath $exePath -ArgumentList $argList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru 
+        }
+        catch {
+            $ErrorMessage = $_.Exception.Message
+            $FailedItem = $_.Exception.ItemName
+            Out-Log -Level Warn -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $exePath, $FailedItem, $ErrorMessage)
+            Throw $_.exception.message
+        }
+    }
     Out-Log -Level Verbose -Message ("MySQLInstaller completed in: {0:g}" -f $m)
     
     Out-Log -Level Verbose -Message ("MySQLInstaller exit code: {0}" -f $proc.ExitCode)
@@ -129,17 +139,31 @@ function Install-VCRuntime {
     # Download and install 
     Out-Log -Level Verbose -Message ("Downloading {0} ..." -f $URI)
     $progressPreference = 'silentlyContinue'
-    try {
-        $m = Measure-Command {Invoke-WebRequest -Uri $URI -OutFile $outputFile}
-    }
-    catch {
-        Out-Log -Level Warn -Message ("An error occurred while downloading {0}" -f $URI)
-        Throw $_.exception.message
+    $m = Measure-Command {
+        try {
+            Invoke-WebRequest -Uri $URI -OutFile $outputFile
+        }
+        catch {
+            $ErrorMessage = $_.Exception.Message
+            $FailedItem = $_.Exception.ItemName
+            Out-Log -Level Warn -Message ("An error occurred while downloading {0}. Failed item: {1}. Exception Message: {2}" -f $URI, $FailedItem, $ErrorMessage)
+            Throw $_.exception.message
+        }
     }
     $progressPreference = 'Continue'
     Out-Log -Level Verbose -Message ("Completed download in: {0:g}" -f $m)
     $argList = @('/install', '/passive', '/norestart')
-    $m = Measure-Command {Start-Process -FilePath $outputFile -ArgumentList $argList -Wait}
+    $m = Measure-Command {
+        try {
+            Start-Process -FilePath $outputFile -ArgumentList $argList -Wait
+        }
+        catch {
+            $ErrorMessage = $_.Exception.Message
+            $FailedItem = $_.Exception.ItemName
+            Out-Log -Level Warn -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $outputFile, $FailedItem, $ErrorMessage)
+            Throw $_.exception.message
+        }
+    }
     Out-Log -Level Verbose -Message ("'{0}' installation completed in: {1:g}" -f $Name, $m)
 
 } # end function Install-VCRuntime
@@ -175,7 +199,18 @@ function Start-Command {
     $fileOutputLog = Join-Path $env:TEMP ("{0}_StdOut.log" -f $Action)
     
     Out-Log -Level Verbose -Message ("Executing: {0} {1}" -f $Path, [string] $ArgList)
-    $m = Measure-Command {$proc = Start-Process -FilePath $Path -ArgumentList $ArgList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru }
+    $m = Measure-Command {
+        try {
+            $proc = Start-Process -FilePath $Path -ArgumentList $ArgList -Wait -RedirectStandardError $fileErrLog -RedirectStandardOutput $fileOutputLog -PassThru 
+        }
+        catch {
+            $ErrorMessage = $_.Exception.Message
+            $FailedItem = $_.Exception.ItemName
+            Out-Log -Level Warn -Message ("An error occurred while executing {0}. Failed item: {1}. Exception Message: {2}" -f $Path, $FailedItem, $ErrorMessage)
+            Throw $_.exception.message
+        }
+ 
+    }
     Out-Log -Level Verbose -Message ("mysqld install exit code: {0}" -f $proc.ExitCode)
     if ($proc.ExitCode -ne 0) {
         Get-Content $fileErrLog
@@ -320,17 +355,32 @@ $fileName = $uriMySQL.Split('/') | Select-Object -Last 1
 $outputFile = Join-Path $downloadsFolder $fileName
 Out-Log -Level Verbose -Message ("Downloading {0} ..." -f $uriMySQL)
 $progressPreference = 'silentlyContinue'
-try {
-    $m = Measure-Command {Invoke-WebRequest -Uri $uriMySQL -OutFile $outputFile}
+$m = Measure-Command {
+    try {
+        Invoke-WebRequest -Uri $uriMySQL -OutFile $outputFile
+    }
+    catch {
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName        
+        Out-Log -Level Warn -Message ("An error occurred while downloading {0} to {1}. Failed item: {2}. Exception Message: {3}" -f $uriMySQL, $outputFile, $FailedItem, $ErrorMessage)
+        Throw $_.exception.message
+    }
 }
-catch {
-    Out-Log -Level Warn -Message ("An error occurred while downloading {0}" -f $uriCSUpgrade)
-    Throw $_.exception.message
-}
+
 $progressPreference = 'Continue'
 Out-Log -Level Verbose -Message ("Completed download in: {0:g}" -f $m)
 $argList = @('/i', $outputFile, '/passive')
-$m = Measure-Command {Start-Process -FilePath msiexec.exe -ArgumentList $argList -Wait}
+$m = Measure-Command {
+    try {
+        Start-Process -FilePath msiexec.exe -ArgumentList $argList -Wait
+    }
+    catch {
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName
+        Out-Log -Level Warn -Message ("An error occurred while executing msiexec.exe. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
+        Throw $_.exception.message
+    }
+}
 Out-Log -Level Verbose -Message ("MySQLInstaller installation completed in: {0:g}" -f $m)
 
 Install-Product -Product "Server"
