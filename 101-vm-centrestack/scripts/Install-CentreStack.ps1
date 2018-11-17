@@ -185,11 +185,24 @@ $spID = $vmInfoPs.Identity.PrincipalId
 Out-Log -Level Info -Message ("The managed identity for Azure resources service principal ID is {0}" -f $spID)
 
 Write-Output ("Installing CentreStack build number {0}" -f $Build)
+$adminVMUsername = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'adminVMUsername').SecretValueText
+$adminVMPassword = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'adminVMPassword').SecretValueText
+# Get a secure string for the password of the VM's local administrator
+$vmPassword = $ConvertTo-SecureString -String $adminVMPassword -AsPlainText -Force
+# Get a credential object for the VM's local administrator
+$vmAdminCred = New-Object PSCredential $adminVMUsername, $vmPassword
+
 $adminDBUsername = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'adminDBUsername').SecretValueText
 $adminDBPassword = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'adminDBPassword').SecretValueText
 $databaseHost = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'databaseHost').SecretValueText
 switch ($databaseHost) {
-    "Local" { .\Install-MySQL }
+    "Local" {
+        $sb = Join-Path $scriptDir "Install-MySQL.ps1"
+        $scriptBlock = [scriptblock]::Create($sb)
+        $job = Start-Job -scriptBlock $scriptBlock -Credential $vmAdminCred
+        $job | Wait-Job 
+          
+    }
     "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
     "Azure_MySQL" { Out-Log -Level Info -Message "Using Azure MySQL."}
     "None" {Out-Log -Level Info -Message "No database specified."}

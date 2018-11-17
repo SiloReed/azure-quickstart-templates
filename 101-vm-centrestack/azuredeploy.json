@@ -993,6 +993,28 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('kvName'), '/adminVMUsername')]",
+      "apiVersion": "2016-10-01",
+      "properties": {
+        "value": "[parameters('adminVMUsername')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.KeyVault/vaults/', variables('kvName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('kvName'), '/adminVMPassword')]",
+      "apiVersion": "2016-10-01",
+      "properties": {
+        "value": "[parameters('adminVMPassword')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.KeyVault/vaults/', variables('kvName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
       "name": "[concat(variables('kvName'), '/adminDBUsername')]",
       "apiVersion": "2016-10-01",
       "properties": {
