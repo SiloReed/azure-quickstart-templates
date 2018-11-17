@@ -188,7 +188,7 @@ Write-Output ("Installing CentreStack build number {0}" -f $Build)
 $adminVMUsername = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'adminVMUsername').SecretValueText
 $adminVMPassword = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'adminVMPassword').SecretValueText
 # Get a secure string for the password of the VM's local administrator
-$vmPassword = $ConvertTo-SecureString -String $adminVMPassword -AsPlainText -Force
+$vmPassword = ConvertTo-SecureString -String $adminVMPassword -AsPlainText -Force
 # Get a credential object for the VM's local administrator
 $vmAdminCred = New-Object PSCredential $adminVMUsername, $vmPassword
 
