@@ -197,11 +197,16 @@ $adminDBPassword = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'a
 $databaseHost = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'databaseHost').SecretValueText
 switch ($databaseHost) {
     "Local" {
+        <#
         $sb = Join-Path $scriptDir "Install-MySQL.ps1"
         $scriptBlock = [scriptblock]::Create($sb)
         $job = Start-Job -scriptBlock $scriptBlock -Credential $vmAdminCred
         $job | Wait-Job | Receive-Job
-          
+        #>
+        $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
+        $runAsArgs = @("-NonInteractive",  "-File",  "`"$scriptPath`"")
+        $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+        Invoke-Runas -User $adminVMUsername -Password $adminVMPassword -Binary $exePath -Args $runAsArgs -LogonType 0x1
     }
     "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
     "Azure_MySQL" { Out-Log -Level Info -Message "Using Azure MySQL."}
