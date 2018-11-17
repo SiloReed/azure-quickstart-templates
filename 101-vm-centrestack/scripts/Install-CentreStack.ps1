@@ -200,7 +200,7 @@ switch ($databaseHost) {
         $sb = Join-Path $scriptDir "Install-MySQL.ps1"
         $scriptBlock = [scriptblock]::Create($sb)
         $job = Start-Job -scriptBlock $scriptBlock -Credential $vmAdminCred
-        $job | Wait-Job 
+        $job | Wait-Job | Receive-Job
           
     }
     "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
