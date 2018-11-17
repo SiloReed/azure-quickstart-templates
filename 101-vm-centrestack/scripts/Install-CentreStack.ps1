@@ -203,9 +203,9 @@ switch ($databaseHost) {
         $job = Start-Job -scriptBlock $scriptBlock -Credential $vmAdminCred
         $job | Wait-Job | Receive-Job
         #>
-        $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
-        $runAsArgs = @("-NonInteractive",  "-File",  "`"$scriptPath`"")
         $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+        $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
+        $runAsArgs = "-NonInteractive -File `"$scriptPath`"
         Invoke-Runas -User $adminVMUsername -Password $adminVMPassword -Binary $exePath -Args $runAsArgs -LogonType 0x1
     }
     "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
