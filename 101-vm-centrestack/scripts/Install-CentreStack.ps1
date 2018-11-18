@@ -190,7 +190,7 @@ $adminVMPassword = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'a
 # Get a secure string for the password of the VM's local administrator
 $vmPassword = ConvertTo-SecureString -String $adminVMPassword -AsPlainText -Force
 # Get a credential object for the VM's local administrator
-$vmAdminCred = New-Object PSCredential $adminVMUsername, $vmPassword
+$vmAdminCred = New-Object PSCredential ("{0}\{1}" -f $env:COMPUTERNAME, $adminVMUsername), $vmPassword
 
 $adminDBUsername = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'adminDBUsername').SecretValueText
 $adminDBPassword = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'adminDBPassword').SecretValueText
