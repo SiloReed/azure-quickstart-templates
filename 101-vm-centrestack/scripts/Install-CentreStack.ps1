@@ -203,10 +203,20 @@ switch ($databaseHost) {
         $job = Start-Job -scriptBlock $scriptBlock -Credential $vmAdminCred
         $job | Wait-Job | Receive-Job
         #>
+        <# This throws Access Denied
         $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
         $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
         $runAsArgs = "-NonInteractive -File `"$scriptPath`""
         Invoke-Runas -User $adminVMUsername -Password $adminVMPassword -Binary $exePath -Args $runAsArgs -LogonType 0x1
+         #>
+         $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+         $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
+         $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"")
+         $sb = "Start-Process -FilePath $exePath -ArgumentList $ArgList -Verb runas -Wait"
+         $scriptBlock = [scriptblock]::Create($sb)
+         # This requires PowerShell remoting
+         Invoke-Command -ScriptBlock $scriptBlock -ComputerName localhost -Credential $vmAdminCred -Verbose
+
     }
     "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
     "Azure_MySQL" { Out-Log -Level Info -Message "Using Azure MySQL."}
