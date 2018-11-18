@@ -212,10 +212,8 @@ switch ($databaseHost) {
          $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
          $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
          $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"")
-         $sb = "Start-Process -FilePath $exePath -ArgumentList $ArgList -Verb runas -Wait"
-         $scriptBlock = [scriptblock]::Create($sb)
          # This requires PowerShell remoting
-         Invoke-Command -ScriptBlock $scriptBlock -ComputerName localhost -Credential $vmAdminCred -Verbose
+         Invoke-Command -ScriptBlock {Start-Process -FilePath $using:exePath -ArgumentList $using:ArgList -Verb runas -Wait} -ComputerName localhost -Credential $vmAdminCred -Verbose
 
     }
     "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
