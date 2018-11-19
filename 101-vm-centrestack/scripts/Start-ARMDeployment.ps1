@@ -1,11 +1,11 @@
-# Downloads the latest CentreStack release and installs on the new machine
 <#
 .Synopsis
-    Downloads the latest CentreStack release and installs on the new machine
+    This script is launched by the Azure RM Custom Script extension. This script then launches other scripts using PowerShell remoting.
 .DESCRIPTION
-	Downloads the latest CentreStack release and installs on the new machine
+    This script is launched by the Azure RM Custom Script extension. This script then launches other scripts using PowerShell remoting.
+    The PowerShell Remoting workaround is necessary because Local System cannot impersonate another user (RunAs fails with access denied).
 .EXAMPLE
-    .\Install-CentreStack -Build 6033 -VaultName kv-centrestack -Modules @(@{name = 'AzureRM.Compute'; version = '5.8.0'}, @{name = 'AzureRM.Profile'; version = '5.8.0'}, @{name = 'AzureRM.KeyVault'; version = '5.2.1'}, @{name = 'AzureAD'; version = '2.0.2.4'})
+    .\Start-ARMDeployment -Build 6033 -VaultName kv-centrestack -Modules @(@{name = 'AzureRM.Compute'; version = '5.8.0'}, @{name = 'AzureRM.Profile'; version = '5.8.0'}, @{name = 'AzureRM.KeyVault'; version = '5.2.1'}, @{name = 'AzureAD'; version = '2.0.2.4'})
 .PARAMETER Build
     The build number to download and install
 .PARAMETER VaultName
@@ -14,13 +14,12 @@
     An array of hashtables specifying the name and version of PowerShell modules that will be installed
 .NOTES 
     Author: Jeff Reed
-    Name: Upgrade-CentreStack.ps1
-    Created: 2018-11-14
+    Name: Start-ARMDeployment.ps1
+    Created: 2018-11-19
     
 #>
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
-
 
 #region script parameters
 [CmdletBinding()]

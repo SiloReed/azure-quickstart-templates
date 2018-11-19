@@ -207,7 +207,7 @@
     "saType": "[if(contains(parameters('vmSize'), 's_v3'), 'Premium_LRS', 'Standard_LRS')]",
     "saTier": "[if(contains(parameters('vmSize'), 's_v3'), 'Premium', 'Standard')]",
     "powerShell": {
-      "script": "Install-CentreStack.ps1",
+      "script": "Start-ARMDeployment.ps1",
       "folder": "scripts",
       "parameters": "[concat('-Verbose', ' -Build ', parameters('buildNumber'), ' -VaultName ', variables('kvName'), ' -Modules ', variables('modules'))]",
       "scriptMySQL": "Install-MySQL.ps1",
