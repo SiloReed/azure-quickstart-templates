@@ -511,10 +511,12 @@ if ($platform -eq "x64") {
 }
 Install-VCRuntime @htParams
 
+Out-Log -Level Verbose -Message "Installing MySQL Workbench."
 Install-Product -Product "Workbench"
 #endregion Install MySQL Workbench 8.0
 
 #region Install Connector/NET
+Out-Log -Level Verbose -Message "Installing Connector/NET."
 Install-Product -Product 'Connector/NET'
 #endregion Install Connector/NET
 

@@ -222,7 +222,7 @@
     "licenseType": "",
     "tier": "Standard",
     "allowAzureIps": true,
-    "sqlServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
+    "dbServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
     "enableATP": false,
     "readerRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
     "roleAssignmentName": "[guid(resourceGroup().id)]",
@@ -874,7 +874,7 @@
       "kind": "",
       "location": "[resourceGroup().location]",
       "scale": null,
-      "name": "[variables('sqlServerName')]",
+      "name": "[variables('dbServerName')]",
       "properties": {
         "version": "5.7",
         "sslEnforcement": "Enabled",
@@ -894,10 +894,26 @@
       }
     },
     {
+      "condition": "[and(variables('allowAzureIps'), equals(parameters('databaseHost'),'Azure_MySQL'))]",
+      "comments": "Microsoft.DBforMySQL firewallRules",
+      "type": "Microsoft.DBforMySQL/servers/firewallRules",
+      "name": "[concat([variables('dbServerName')], '/', parameters('firewallRules_AllowCentreStackVM_name'))]",
+      "apiVersion": "2017-12-01-preview",
+      "scale": null,
+      "properties": {
+          "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
+          "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
+      },
+      "dependsOn": [
+          "[resourceId('Microsoft.DBforMySQL/servers', [variables('dbServerName')])]",
+          "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+      ]
+    },        
+    {
       "condition": "[equals(parameters('databaseHost'),'Azure_SQL')]",
       "apiVersion": "2015-05-01-preview",
       "location": "[resourceGroup().location]",
-      "name": "[variables('sqlServerName')]",
+      "name": "[variables('dbServerName')]",
       "properties": {
         "administratorLogin": "[parameters('adminDBUsername')]",
         "administratorLoginPassword": "[parameters('adminDBPassword')]",
@@ -908,7 +924,7 @@
           "condition": "[equals(parameters('databaseHost'),'Azure_SQL')]",
           "apiVersion": "2017-10-01-preview",
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+            "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]"
           ],
           "location": "[resourceGroup().location]",
           "name": "[variables('databaseName')]",
@@ -929,7 +945,7 @@
           "condition": "[and(variables('allowAzureIps'), equals(parameters('databaseHost'),'Azure_SQL'))]",
           "apiVersion": "2014-04-01-preview",
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]"
+            "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]"
           ],
           "location": "[resourceGroup().location]",
           "name": "AllowAllWindowsAzureIps",
@@ -945,8 +961,8 @@
           "type": "securityAlertPolicies",
           "name": "Default",
           "dependsOn": [
-            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'))]",
-            "[concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName'))]"
+            "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]",
+            "[concat('Microsoft.Sql/servers/', variables('dbServerName'), '/databases/', variables('databaseName'))]"
           ],
           "properties": {
             "state": "Enabled",
@@ -1100,7 +1116,7 @@
     },
     "database": {
       "type": "string",
-      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), concat('Microsoft.Sql/servers/', variables('sqlServerName'), '/databases/', variables('databaseName')), 'all-in-one')]"
+      "value": "[if(equals(parameters('databaseHost'), 'Azure_SQL'), concat('Microsoft.Sql/servers/', variables('dbServerName'), '/databases/', variables('databaseName')), 'all-in-one')]"
     }
   }
 }
