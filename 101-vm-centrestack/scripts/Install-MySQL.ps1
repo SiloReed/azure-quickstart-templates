@@ -21,7 +21,9 @@
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
 [CmdletBinding()]
-Param()
+Param(
+    [switch] $SkipServer = $false
+)
 
 #region functions
 function Install-Product {
@@ -330,6 +332,15 @@ Write-Output ("Log file: {0}" -f $script:log)
 
 . (Join-Path $scriptDir "Common-Functions.ps1")
 
+# Check if TCP port 3306 is already in use, if it is throw an error
+$tcpPort = 3306
+$tcpConn = Get-NetTCPConnection | 
+    Where-Object {$_.LocalPort -eq $tcpPort -and ($_.LocalAddress -eq '127.0.0.1' -or $_.LocalAddress -eq '0.0.0.0')} | 
+    Select-Object -First 1
+if ($null -ne $tcpConn) {
+    $tcpProcess = Get-Process -Id $tcpConn.OwningProcess
+    Out-Log -Level Error -Message ("Unable to continue. TCP port {0} is already owned by the process named {1} `n({2})" -f $tcpPort, $tcpProcess.Name, $tcpProcess.Path )
+}
 
 # Force TLSv1.2 else Invoke-WebRequest may throw "The underlying connection was closed: An unexpected error occurred on a send."
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -419,62 +430,67 @@ $m = Measure-Command {
 
 Out-Log -Level Verbose -Message ("MySQLInstaller installation completed in: {0:g}" -f $m)
 
-Install-Product -Product "Server"
-
-# Create default Data directory
-$dataDir = 'C:/ProgramData/MySQL/MySQL Server 5.7/data'
-if (-not (Test-Path $dataDir) ) {
-    New-Item -Path $dataDir -ItemType Directory | Out-Null
+if ($PSBoundParameters.ContainsKey('SkipServer')) {
+    Out-Log -Level Info -Message "SkipServer argument specified so MySQL Server will not be installed."
 }
+else {
+    Install-Product -Product "Server"
 
-# Create Uploads directory
-$uploadsDir = 'C:/ProgramData/MySQL/MySQL Server 5.7/Uploads'
-if (-not (Test-Path $uploadsDir) ) {
-    New-Item -Path $uploadsDir -ItemType Directory | Out-Null
+    # Create default Data directory
+    $dataDir = 'C:/ProgramData/MySQL/MySQL Server 5.7/data'
+    if (-not (Test-Path $dataDir) ) {
+        New-Item -Path $dataDir -ItemType Directory | Out-Null
+    }
+    
+    # Create Uploads directory
+    $uploadsDir = 'C:/ProgramData/MySQL/MySQL Server 5.7/Uploads'
+    if (-not (Test-Path $uploadsDir) ) {
+        New-Item -Path $uploadsDir -ItemType Directory | Out-Null
+    }
+    
+    # Replace %COMPUTERNAME% string in Here-String with actual computername
+    $iniText = $iniText.Replace('%COMPUTERNAME%', $env:ComputerName)
+    # Write a my.ini file from the Here-String text
+    $defaultsFile = 'C:/ProgramData/MySQL/MySQL Server 5.7/my.ini'
+    [System.IO.File]::WriteAllText($defaultsFile, $iniText )
+    
+    # Generate an 8 character random password and save it in the mysql-init.txt file in the user's Documents directory
+    [Reflection.Assembly]::LoadWithPartialName("System.Web") | Out-Null
+    $rootPassword = [System.Web.Security.Membership]::GeneratePassword(8,0)
+    $initFile = Join-Path $myDocs "mysql-init.txt"
+    $sqlCMD = "ALTER USER 'root'@'localhost' IDENTIFIED BY '$rootPassword';"
+    $sqlCMD  | Out-File -FilePath $initFile -Encoding utf8
+    
+    # Initialize MySQL with --initialize-insecure
+    $htParams = @{
+        Path = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysqld.exe"
+        ArgList = @('--initialize-insecure')
+        Action = "MySQLInitialize"
+    }
+    Start-Command @htParams
+    
+    # Install MySQL as a Windows service
+    $htParams = @{
+        Path = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysqld.exe"
+        ArgList = @('--install')
+        Action = "MySQLInstallService"
+    }
+    Start-Command @htParams
+    
+    # Start the MySQL Service
+    Start-Service -Name MySQL -Verbose
+    
+    # Change the root password
+    $argList = @()
+    $argList += "-uroot"
+    $argList += "--execute=`"$sqlCMD`""
+    $htParams = @{
+        Path = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe"
+        ArgList = $argList
+        Action = "MySQLChangeRootPassword"
+    }
+    Start-Command @htParams
 }
-
-# Replace %COMPUTERNAME% string in Here-String with actual computername
-$iniText = $iniText.Replace('%COMPUTERNAME%', $env:ComputerName)
-# Write a my.ini file from the Here-String text
-$defaultsFile = 'C:/ProgramData/MySQL/MySQL Server 5.7/my.ini'
-[System.IO.File]::WriteAllText($defaultsFile, $iniText )
-
-# Generate an 8 character random password and save it in the mysql-init.txt file in the user's Documents directory
-[Reflection.Assembly]::LoadWithPartialName("System.Web") | Out-Null
-$rootPassword = [System.Web.Security.Membership]::GeneratePassword(8,0)
-$initFile = Join-Path $myDocs "mysql-init.txt"
-$sqlCMD = "ALTER USER 'root'@'localhost' IDENTIFIED BY '$rootPassword';"
-$sqlCMD  | Out-File -FilePath $initFile -Encoding utf8
-
-# Initialize MySQL with --initialize-insecure
-$htParams = @{
-    Path = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysqld.exe"
-    ArgList = @('--initialize-insecure')
-    Action = "MySQLInitialize"
-}
-Start-Command @htParams
-
-# Install MySQL as a Windows service
-$htParams = @{
-    Path = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysqld.exe"
-    ArgList = @('--install')
-    Action = "MySQLInstallService"
-}
-Start-Command @htParams
-
-# Start the MySQL Service
-Start-Service -Name MySQL -Verbose
-
-# Change the root password
-$argList = @()
-$argList += "-uroot"
-$argList += "--execute=`"$sqlCMD`""
-$htParams = @{
-    Path = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe"
-    ArgList = $argList
-    Action = "MySQLChangeRootPassword"
-}
-Start-Command @htParams
 #endregion MySQL Server install
 
 #region Install MySQL Workbench 8.0
@@ -503,26 +519,32 @@ Install-Product -Product 'Connector/NET'
 #endregion Install Connector/NET
 
 #region Create Database and User
-# Create 'csmain' database and 'csuser' user. Grant csuser all privileges to csmain
-$csuserPassword = [System.Web.Security.Membership]::GeneratePassword(8,0)
-$sqlCMD = @"
-CREATE DATABASE IF NOT EXISTS csmain;
-CREATE USER 'csuser'@'localhost' IDENTIFIED BY '$csuserPassword';
-GRANT ALL ON csmain.* TO 'csuser'@'localhost';
-"@
-$createFile = Join-Path $myDocs "mysql-create.txt"
-$sqlCMD  | Out-File -FilePath $createFile -Encoding utf8
-
-$argList = @()
-$argList += "-uroot"
-$argList += "-p$rootPassword"
-$argList += "--execute=`"source $createFile`""
-$htParams = @{
-    Path = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe"
-    ArgList = $argList
-    Action = "MySQLCreateDBandUser"
+if ($PSBoundParameters.ContainsKey('SkipServer')) {
+    Out-Log -Level Info -Message "SkipServer argument specified so local database will not be created."
 }
-Start-Command @htParams
+else {
+    Out-Log -Level Verbose -Message "Creating csmain local database and csuser account."
+    # Create 'csmain' database and 'csuser' user. Grant csuser all privileges to csmain
+    $csuserPassword = [System.Web.Security.Membership]::GeneratePassword(8,0)
+    $sqlCMD = @"
+    CREATE DATABASE IF NOT EXISTS csmain;
+    CREATE USER 'csuser'@'localhost' IDENTIFIED BY '$csuserPassword';
+    GRANT ALL ON csmain.* TO 'csuser'@'localhost';
+"@
+    $createFile = Join-Path $myDocs "mysql-create.txt"
+    $sqlCMD  | Out-File -FilePath $createFile -Encoding utf8
+
+    $argList = @()
+    $argList += "-uroot"
+    $argList += "-p$rootPassword"
+    $argList += "--execute=`"source $createFile`""
+    $htParams = @{
+        Path = "C:\Program Files\MySQL\MySQL Server 5.7\bin\mysql.exe"
+        ArgList = $argList
+        Action = "MySQLCreateDBandUser"
+    }
+    Start-Command @htParams
+}
 #endregion Create Database and User
 
 # Stop the stopwatch

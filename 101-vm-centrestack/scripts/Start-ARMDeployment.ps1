@@ -196,27 +196,22 @@ $adminDBPassword = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'a
 $databaseHost = (Get-AzureKeyVaultSecret -VaultName $VaultName -SecretName 'databaseHost').SecretValueText
 switch ($databaseHost) {
     "Local" {
-        <#
-        $sb = Join-Path $scriptDir "Install-MySQL.ps1"
-        $scriptBlock = [scriptblock]::Create($sb)
-        $job = Start-Job -scriptBlock $scriptBlock -Credential $vmAdminCred
-        $job | Wait-Job | Receive-Job
-        #>
-        <# This throws Access Denied
-        $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-        $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
-        $runAsArgs = "-NonInteractive -File `"$scriptPath`""
-        Invoke-Runas -User $adminVMUsername -Password $adminVMPassword -Binary $exePath -Args $runAsArgs -LogonType 0x1
-         #>
          $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
          $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
          $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"")
-         # This requires PowerShell remoting
+         # This requires PowerShell remoting and works around the problem where the Local System account cannot RunAs administrator
          Invoke-Command -ScriptBlock {Start-Process -FilePath $using:exePath -ArgumentList $using:ArgList -Verb runas -Wait} -ComputerName localhost -Credential $vmAdminCred -Verbose
-
     }
     "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
-    "Azure_MySQL" { Out-Log -Level Info -Message "Using Azure MySQL."}
+    "Azure_MySQL" { 
+        Out-Log -Level Info -Message "Using Azure MySQL."
+        $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+        $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
+        # Skip installing MySQL server locally as Azure MySQL service is used
+        $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"", "-SkipServer")
+        # This requires PowerShell remoting and works around the problem where the Local System account cannot RunAs administrator
+        Invoke-Command -ScriptBlock {Start-Process -FilePath $using:exePath -ArgumentList $using:ArgList -Verb runas -Wait} -ComputerName localhost -Credential $vmAdminCred -Verbose
+    }
     "None" {Out-Log -Level Info -Message "No database specified."}
 }
 #endregion Script Body

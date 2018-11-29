@@ -155,7 +155,7 @@
       "type": "string",
       "minLength": 1,
       "metadata": {
-        "description": "Specifiy the name of Azure SQL Server."
+        "description": "Specify the name of Azure SQL Server."
       }
     },
     "skuName": {
@@ -227,7 +227,14 @@
     "readerRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
     "roleAssignmentName": "[guid(resourceGroup().id)]",
     "singleQuote": "'",
-    "modules": "[replace(replace(replace(replace(replace(string(parameters('modules')), '[{\"', '@(@{'), '\":\"', concat(' = ', variables('singleQuote'))), '\",\"', concat(variables('singleQuote'), '; ')), '\"},{\"', concat(variables('singleQuote'), '}, @{')), '\"}]', concat(variables('singleQuote'), '})'))]"
+    "modules": "[replace(replace(replace(replace(replace(string(parameters('modules')), '[{\"', '@(@{'), '\":\"', concat(' = ', variables('singleQuote'))), '\",\"', concat(variables('singleQuote'), '; ')), '\"},{\"', concat(variables('singleQuote'), '}, @{')), '\"}]', concat(variables('singleQuote'), '})'))]",
+    "mysqlSizeMB": 20480,
+    "mysqlBackupRetentionDays": 7,
+    "mysqlGeoRedundantBackup": "Disabled",
+    "mysqlSkuName": "B_Gen5_2",
+    "mysqlSkuTier": "Basic",
+    "mysqlSkuCapacity": 2,
+    "mysqlSkuFamily": "Gen5"
   },
   "resources": [
     {
@@ -858,6 +865,33 @@
       "dependsOn": [
         "[resourceId('Microsoft.Compute/virtualMachines', parameters('vmName'))]"
       ]
+    },
+    {
+      "condition": "[equals(parameters('databaseHost'),'Azure_MySQL')]",
+      "comments": "mysqlserver",
+      "type": "Microsoft.DBforMySQL/servers",
+      "apiVersion": "2017-12-01-preview",
+      "kind": "",
+      "location": "[resourceGroup().location]",
+      "scale": null,
+      "name": "[variables('sqlServerName')]",
+      "properties": {
+        "version": "5.7",
+        "sslEnforcement": "Enabled",
+        "administratorLogin": "[parameters('adminDBUsername')]",
+        "administratorLoginPassword": "[parameters('adminDBPassword')]",
+        "storageProfile": {
+          "storageMB": "[variables('mysqlSizeMB')]",
+          "backupRetentionDays": "[variables('mysqlBackupRetentionDays')]",
+          "geoRedundantBackup": "[variables('mysqlGeoRedundantBackup')]"
+        }
+      },
+      "sku": {
+        "name": "[variables('mysqlSkuName')]",
+        "tier": "[variables('mysqlSkuTier')]",
+        "capacity": "[variables('mysqlSkuCapacity')]",
+        "family": "[variables('mysqlSkuFamily')]"
+      }
     },
     {
       "condition": "[equals(parameters('databaseHost'),'Azure_SQL')]",
