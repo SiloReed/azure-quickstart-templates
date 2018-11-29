@@ -234,7 +234,8 @@
     "mysqlSkuName": "B_Gen5_2",
     "mysqlSkuTier": "Basic",
     "mysqlSkuCapacity": 2,
-    "mysqlSkuFamily": "Gen5"
+    "mysqlSkuFamily": "Gen5",
+    "mysqlFirewallRuleName": "AllowCentreStackVM"
   },
   "resources": [
     {
@@ -895,9 +896,8 @@
     },
     {
       "condition": "[and(variables('allowAzureIps'), equals(parameters('databaseHost'),'Azure_MySQL'))]",
-      "comments": "Microsoft.DBforMySQL firewallRules",
       "type": "Microsoft.DBforMySQL/servers/firewallRules",
-      "name": "[concat([variables('dbServerName')], '/', parameters('firewallRules_AllowCentreStackVM_name'))]",
+      "name": "[concat(variables('dbServerName'), '/', [variables('mysqlFirewallRuleName')])",
       "apiVersion": "2017-12-01-preview",
       "scale": null,
       "properties": {
@@ -905,7 +905,7 @@
           "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
       },
       "dependsOn": [
-          "[resourceId('Microsoft.DBforMySQL/servers', [variables('dbServerName')])]",
+          "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
           "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
       ]
     },        
