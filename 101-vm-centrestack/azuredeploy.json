@@ -892,23 +892,38 @@
         "tier": "[variables('mysqlSkuTier')]",
         "capacity": "[variables('mysqlSkuCapacity')]",
         "family": "[variables('mysqlSkuFamily')]"
-      }
-    },
-    {
-      "condition": "[and(variables('allowAzureIps'), equals(parameters('databaseHost'),'Azure_MySQL'))]",
-      "type": "Microsoft.DBforMySQL/servers/firewallRules",
-      "name": "[concat(variables('dbServerName'), '/', [variables('mysqlFirewallRuleName')])",
-      "apiVersion": "2017-12-01-preview",
-      "scale": null,
-      "properties": {
-          "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
-          "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
       },
-      "dependsOn": [
-          "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
-          "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+      "resources": [
+        {
+          "name": "[variables('databaseName')]",
+          "type": "databases",
+          "apiVersion": "2017-12-01",
+          "properties": {
+            "charset": "utf8",
+            "collation": "utf8_general_ci"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]"
+        ]
+
+        },        
+        {
+          "condition": "[equals(parameters('databaseHost'),'Azure_MySQL')]",
+          "type": "firewallRules",
+          "name": "[variables('mysqlFirewallRuleName')]",
+          "apiVersion": "2017-12-01-preview",
+          "scale": null,
+          "properties": {
+              "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
+              "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
+          },
+          "dependsOn": [
+              "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
+              "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+          ]
+        }
       ]
-    },        
+    },
     {
       "condition": "[equals(parameters('databaseHost'),'Azure_SQL')]",
       "apiVersion": "2015-05-01-preview",

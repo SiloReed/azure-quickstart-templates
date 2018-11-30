@@ -509,6 +509,7 @@ if ($platform -eq "x64") {
         Name = 'Microsoft Visual C++ 2015 Redistributable Update 3 x86'
     }
 }
+Out-Log -Level Verbose -Message "Installing MySQL Workbench."
 Install-VCRuntime @htParams
 
 Out-Log -Level Verbose -Message "Installing MySQL Workbench."
