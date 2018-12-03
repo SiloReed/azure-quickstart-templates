@@ -211,6 +211,7 @@
       "folder": "scripts",
       "parameters": "[concat('-Verbose', ' -Build ', parameters('buildNumber'), ' -VaultName ', variables('kvName'), ' -Modules ', variables('modules'))]",
       "scriptMySQL": "Install-MySQL.ps1",
+      "scriptSSMS": "Install-SSMS.ps1",
       "scriptCommonFunctions": "Common-Functions.ps1"
     },
     "customScriptExtName": "Install-CentreStack",
@@ -235,7 +236,8 @@
     "mysqlSkuTier": "Basic",
     "mysqlSkuCapacity": 2,
     "mysqlSkuFamily": "Gen5",
-    "mysqlFirewallRuleName": "AllowCentreStackVM"
+    "mysqlFirewallRuleName": "AllowCentreStackVM",
+    "mysqlsslEnforcement": "Disabled"
   },
   "resources": [
     {
@@ -252,6 +254,7 @@
     },
     {
       "type": "Microsoft.Network/networkInterfaces",
+      "comments": "networkInterface",
       "name": "[variables('nicName')]",
       "apiVersion": "2018-02-01",
       "location": "[resourceGroup().location]",
@@ -853,6 +856,7 @@
           "fileUris": [
             "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').script, parameters('_artifactsLocationSasToken'))]",
             "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').scriptMySQL, parameters('_artifactsLocationSasToken'))]",
+            "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').scriptSSMS, parameters('_artifactsLocationSasToken'))]",
             "[concat(parameters('_artifactsLocation'), '/', variables('powerShell').folder, '/', variables('powerShell').scriptCommonFunctions, parameters('_artifactsLocationSasToken'))]"
           ]
         },
@@ -878,7 +882,7 @@
       "name": "[variables('dbServerName')]",
       "properties": {
         "version": "5.7",
-        "sslEnforcement": "Enabled",
+        "sslEnforcement": "[variables('mysqlsslEnforcement')]",
         "administratorLogin": "[parameters('adminDBUsername')]",
         "administratorLoginPassword": "[parameters('adminDBPassword')]",
         "storageProfile": {
@@ -903,12 +907,12 @@
             "collation": "utf8_general_ci"
           },
           "dependsOn": [
-            "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]"
+            "[concat('Microsoft.DBforMySQL/servers', variables('dbServerName'))]"
         ]
 
         },        
         {
-          "condition": "[equals(parameters('databaseHost'),'Azure_MySQL')]",
+          "condition": "[and(not(variables('allowAzureIps')), equals(parameters('databaseHost'),'Azure_MySQL'))]",
           "type": "firewallRules",
           "name": "[variables('mysqlFirewallRuleName')]",
           "apiVersion": "2017-12-01-preview",
@@ -918,8 +922,8 @@
               "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
           },
           "dependsOn": [
-              "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
-              "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+            "[concat('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
+            "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
           ]
         }
       ]
@@ -957,7 +961,7 @@
           "type": "databases"
         },
         {
-          "condition": "[and(variables('allowAzureIps'), equals(parameters('databaseHost'),'Azure_SQL'))]",
+          "condition": "[and(not(variables('allowAzureIps')), equals(parameters('databaseHost'),'Azure_SQL'))]",
           "apiVersion": "2014-04-01-preview",
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]"
@@ -965,8 +969,8 @@
           "location": "[resourceGroup().location]",
           "name": "AllowAllWindowsAzureIps",
           "properties": {
-            "endIpAddress": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]",
-            "startIpAddress": "[reference(concat('Microsoft.Network/networkInterfaces/', variables('nicName'))).ipConfigurations[0].properties.privateIPAddress]"
+            "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
+            "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
           },
           "type": "firewallrules"
         },

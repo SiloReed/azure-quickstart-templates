@@ -149,7 +149,7 @@ try {
 catch {
     $ErrorMessage = $_.Exception.Message
     $FailedItem = $_.Exception.ItemName
-    Out-Log -Level Warn -Message ("An error occurred while retrieving the Azure OAuth2 access token. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
+    Out-Log -Level Error -Message ("An error occurred while retrieving the Azure OAuth2 access token. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
     Throw $_.exception.message
 }
 # Use the Azure instance Metadata to get information about this instance
@@ -159,7 +159,7 @@ try {
 catch {
     $ErrorMessage = $_.Exception.Message
     $FailedItem = $_.Exception.ItemName
-    Out-Log -Level Warn -Message ("An error occurred while accessing Azure Instance Metadata. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
+    Out-Log -Level Error -Message ("An error occurred while accessing Azure Instance Metadata. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
     Throw $_.exception.message
 }
 
@@ -171,7 +171,7 @@ try {
 catch {
     $ErrorMessage = $_.Exception.Message
     $FailedItem = $_.Exception.ItemName
-    Out-Log -Level Warn -Message ("An error occurred while accessing the Azure REST API. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
+    Out-Log -Level Error -Message ("An error occurred while accessing the Azure REST API. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
     Throw $_.exception.message
 }
 
@@ -202,7 +202,14 @@ switch ($databaseHost) {
          # This requires PowerShell remoting and works around the problem where the Local System account cannot RunAs administrator
          Invoke-Command -ScriptBlock {Start-Process -FilePath $using:exePath -ArgumentList $using:ArgList -Verb runas -Wait} -ComputerName localhost -Credential $vmAdminCred -Verbose
     }
-    "Azure_SQL" { Out-Log -Level Info -Message "Using Azure SQL."}
+    "Azure_SQL" { 
+        Out-Log -Level Info -Message "Using Azure SQL."
+        $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+        $scriptPath = Join-Path $scriptDir "Install-SSMS.ps1"
+        $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"")
+        # This requires PowerShell remoting and works around the problem where the Local System account cannot RunAs administrator
+        Invoke-Command -ScriptBlock {Start-Process -FilePath $using:exePath -ArgumentList $using:ArgList -Verb runas -Wait} -ComputerName localhost -Credential $vmAdminCred -Verbose
+    }
     "Azure_MySQL" { 
         Out-Log -Level Info -Message "Using Azure MySQL."
         $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
