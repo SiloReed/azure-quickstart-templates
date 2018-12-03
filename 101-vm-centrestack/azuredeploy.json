@@ -222,7 +222,8 @@
     "zoneRedundant": false,
     "licenseType": "",
     "tier": "Standard",
-    "allowAzureIps": true,
+    "allowAzureIps": false,
+    "sqlFirewallRuleName": "AllowCentreStackVM",
     "dbServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
     "enableATP": false,
     "readerRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
@@ -967,7 +968,7 @@
             "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]"
           ],
           "location": "[resourceGroup().location]",
-          "name": "AllowAllWindowsAzureIps",
+          "name": "[variables('sqlFirewallRuleName')]",
           "properties": {
             "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
             "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
