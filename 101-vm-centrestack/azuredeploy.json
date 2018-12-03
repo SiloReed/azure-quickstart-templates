@@ -900,6 +900,7 @@
       },
       "resources": [
         {
+          "condition": "[equals(parameters('databaseHost'),'Azure_MySQL')]",
           "name": "[variables('databaseName')]",
           "type": "databases",
           "apiVersion": "2017-12-01",
@@ -908,7 +909,7 @@
             "collation": "utf8_general_ci"
           },
           "dependsOn": [
-            "[concat('Microsoft.DBforMySQL/servers', variables('dbServerName'))]"
+            "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]"
         ]
 
         },        
@@ -923,7 +924,7 @@
               "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
           },
           "dependsOn": [
-            "[concat('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
+            "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
             "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
           ]
         }
