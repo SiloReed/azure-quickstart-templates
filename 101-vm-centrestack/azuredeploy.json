@@ -222,7 +222,7 @@
     "zoneRedundant": false,
     "licenseType": "",
     "tier": "Standard",
-    "allowAzureIps": false,
+    "allowAzureIps": true,
     "sqlFirewallRuleName": "AllowCentreStackVM",
     "dbServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
     "enableATP": false,
@@ -914,14 +914,14 @@
 
         },        
         {
-          "condition": "[and(not(variables('allowAzureIps')), equals(parameters('databaseHost'),'Azure_MySQL'))]",
+          "condition": "[equals(parameters('databaseHost'),'Azure_MySQL')]",
           "type": "firewallRules",
           "name": "[variables('mysqlFirewallRuleName')]",
           "apiVersion": "2017-12-01-preview",
           "scale": null,
           "properties": {
-              "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
-              "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
+              "startIpAddress": "[if(variables('allowAzureIps'), '0.0.0.0', reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress)]",
+              "endIpAddress": "[if(variables('allowAzureIps'), '0.0.0.0', reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress)]"
           },
           "dependsOn": [
             "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
@@ -963,7 +963,7 @@
           "type": "databases"
         },
         {
-          "condition": "[and(not(variables('allowAzureIps')), equals(parameters('databaseHost'),'Azure_SQL'))]",
+          "condition": "[equals(parameters('databaseHost'),'Azure_SQL')]",
           "apiVersion": "2014-04-01-preview",
           "dependsOn": [
             "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]"
@@ -971,8 +971,8 @@
           "location": "[resourceGroup().location]",
           "name": "[variables('sqlFirewallRuleName')]",
           "properties": {
-            "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
-            "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
+            "endIpAddress": "[if(variables('allowAzureIps'), '0.0.0.0', reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress)]",
+            "startIpAddress": "[if(variables('allowAzureIps'), '0.0.0.0', reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress)]"
           },
           "type": "firewallrules"
         },

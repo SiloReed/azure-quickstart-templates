@@ -56,7 +56,7 @@
       "value": "2016-Datacenter"
     },
     "databaseHost": {
-      "value": "Azure_SQL"
+      "value": "Azure_MySQL"
     },
     "skuName": {
       "value": "S0"

@@ -152,6 +152,7 @@ catch {
     Out-Log -Level Error -Message ("An error occurred while retrieving the Azure OAuth2 access token. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
     Throw $_.exception.message
 }
+Out-Log -Level Verbose -Message ("Retrieved this access token from instance metadata: '{0}'" -f $accessToken)
 # Use the Azure instance Metadata to get information about this instance
 try {
     $compute = Invoke-RestMethod -Headers @{"Metadata" = "true"} -URI http://169.254.169.254/metadata/instance/compute?api-version=2017-08-01 -Method get
