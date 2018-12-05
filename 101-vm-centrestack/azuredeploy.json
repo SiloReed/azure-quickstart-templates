@@ -222,7 +222,7 @@
     "zoneRedundant": false,
     "licenseType": "",
     "tier": "Standard",
-    "allowAzureIps": true,
+    "allowAzureIps": false,
     "sqlFirewallRuleName": "AllowCentreStackVM",
     "dbServerName": "[toLower(concat(parameters('serverNameSQL'), uniqueString(resourceGroup().id)))]",
     "enableATP": false,
@@ -920,14 +920,30 @@
           "apiVersion": "2017-12-01-preview",
           "scale": null,
           "properties": {
-              "startIpAddress": "[if(variables('allowAzureIps'), '0.0.0.0', reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress)]",
-              "endIpAddress": "[if(variables('allowAzureIps'), '0.0.0.0', reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress)]"
+              "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
+              "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
+          },
+          "dependsOn": [
+            "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
+            "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+          ]
+        },
+        {
+          "condition": "[and(variables('allowAzureIps'), equals(parameters('databaseHost'),'Azure_MySQL'))]",
+          "type": "firewallRules",
+          "name": "AllowAzureServices",
+          "apiVersion": "2017-12-01-preview",
+          "scale": null,
+          "properties": {
+              "startIpAddress": "0.0.0.0",
+              "endIpAddress": "0.0.0.0"
           },
           "dependsOn": [
             "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
             "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
           ]
         }
+
       ]
     },
     {
