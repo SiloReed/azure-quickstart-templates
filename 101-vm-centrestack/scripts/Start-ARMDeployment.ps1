@@ -166,7 +166,7 @@ catch {
 Out-Log -Level Verbose -Message ("Subscription ID: {0}" -f $compute.subscriptionId)
 Out-Log -Level Verbose -Message ("Resource Group Name: {0}" -f $compute.resourceGroupName)
 Out-Log -Level Verbose -Message ("Virtual Machine Name: {0}" -f $compute.name)
-
+<# Not sure why this fails with forbidden 403 when allowAzureIps = false
 # Demonstrates how to get information from the Azure REST API for this instance.
 $uri = ("https://management.azure.com/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.Compute/virtualMachines/{2}?api-version=2017-12-01" -f $compute.subscriptionId, $compute.resourceGroupName, $compute.name)
 try {
@@ -178,8 +178,8 @@ catch {
     Out-Log -Level Error -Message ("An error occurred while accessing the Azure REST API. Failed item: {0}. Exception Message: {1}" -f $FailedItem, $ErrorMessage)
     Throw $_.exception.message
 }
-
 Out-Log -Level Info -Message ("Instance ID is: {0}" -f $vmInfoRest.id)
+#>
 
 # Sign into AzureRM using managed identity
 Add-AzureRmAccount -identity
