@@ -22,7 +22,9 @@
 #Requires -RunAsAdministrator
 [CmdletBinding()]
 Param(
-    [switch] $SkipServer = $false
+    [switch] $SkipServer = $false,
+    [string] $ServerFQDN,
+    [string] $UserName
 )
 
 #region functions
@@ -332,16 +334,6 @@ Write-Output ("Log file: {0}" -f $script:log)
 
 . (Join-Path $scriptDir "Common-Functions.ps1")
 
-# Check if TCP port 3306 is already in use, if it is throw an error
-$tcpPort = 3306
-$tcpConn = Get-NetTCPConnection | 
-    Where-Object {$_.LocalPort -eq $tcpPort -and ($_.LocalAddress -eq '127.0.0.1' -or $_.LocalAddress -eq '0.0.0.0')} | 
-    Select-Object -First 1
-if ($null -ne $tcpConn) {
-    $tcpProcess = Get-Process -Id $tcpConn.OwningProcess
-    Out-Log -Level Error -Message ("Unable to continue. TCP port {0} is already owned by the process named {1} `n({2})" -f $tcpPort, $tcpProcess.Name, $tcpProcess.Path )
-}
-
 # Force TLSv1.2 else Invoke-WebRequest may throw "The underlying connection was closed: An unexpected error occurred on a send."
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
@@ -432,8 +424,20 @@ Out-Log -Level Verbose -Message ("MySQLInstaller installation completed in: {0:g
 
 if ($PSBoundParameters.ContainsKey('SkipServer')) {
     Out-Log -Level Info -Message "SkipServer argument specified so MySQL Server will not be installed."
+    Out-Log -Level Info -Message "Server FQDN: $ServerFQDN"
+    Out-Log -Level Info -Message "Database user name: $UserName"
 }
 else {
+    # Check if TCP port 3306 is already in use, if it is throw an error
+    $tcpPort = 3306
+    $tcpConn = Get-NetTCPConnection | 
+        Where-Object {$_.LocalPort -eq $tcpPort -and ($_.LocalAddress -eq '127.0.0.1' -or $_.LocalAddress -eq '0.0.0.0')} | 
+        Select-Object -First 1
+    if ($null -ne $tcpConn) {
+        $tcpProcess = Get-Process -Id $tcpConn.OwningProcess
+        Out-Log -Level Error -Message ("Unable to continue. TCP port {0} is already owned by the process named {1} `n({2})" -f $tcpPort, $tcpProcess.Name, $tcpProcess.Path )
+    }
+    
     Install-Product -Product "Server"
 
     # Create default Data directory

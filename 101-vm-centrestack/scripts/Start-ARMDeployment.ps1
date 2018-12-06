@@ -140,8 +140,8 @@ if ($null -ne $app) {
 }
 
 # Get the OAuth2 token for the virtual machine's managed identity allowing it to query the Azure Management REST APIs
-$uri = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F'
 try {
+    $uri = 'http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fmanagement.azure.com%2F'
     $response = Invoke-WebRequest -Uri $uri -Method GET -Headers @{Metadata = "true"}
     $content = $response.Content | ConvertFrom-Json
     $accessToken = $content.access_token
@@ -216,10 +216,15 @@ switch ($databaseHost) {
     }
     "Azure_MySQL" { 
         Out-Log -Level Info -Message "Using Azure MySQL."
+        $Server = Get-AzureRmResource -ResourceGroupName $compute.resourceGroupName -ResourceType 'Microsoft.DBforMySQL/servers'
+        $UserName = $adminDBUsername + '@' + $Server 
+        $uri = ("https://management.azure.com/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.DBforMySQL/servers/{2}?api-version=2017-12-01" -f $compute.subscriptionId, $compute.resourceGroupName, $Server.Name)
+        $r = (Invoke-WebRequest -Uri $uri  -Method GET -ContentType "application/json" -Headers @{ Authorization = "Bearer $accessToken"}).content | ConvertFrom-JSON
+        $r.properties.fullyQualifiedDomainName
         $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
         $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
         # Skip installing MySQL server locally as Azure MySQL service is used
-        $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"", "-SkipServer")
+        $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"", "-SkipServer", "-ServerFQDN", $r.properties.fullyQualifiedDomainName, "-UserName" $UserName)
         # This requires PowerShell remoting and works around the problem where the Local System account cannot RunAs administrator
         Invoke-Command -ScriptBlock {Start-Process -FilePath $using:exePath -ArgumentList $using:ArgList -Verb runas -Wait} -ComputerName localhost -Credential $vmAdminCred -Verbose
     }
