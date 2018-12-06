@@ -939,11 +939,9 @@
               "endIpAddress": "0.0.0.0"
           },
           "dependsOn": [
-            "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]",
-            "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+            "[resourceId('Microsoft.DBforMySQL/servers', variables('dbServerName'))]"
           ]
         }
-
       ]
     },
     {
@@ -980,18 +978,33 @@
         },
         {
           "condition": "[equals(parameters('databaseHost'),'Azure_SQL')]",
+          "type": "firewallrules",
           "apiVersion": "2014-04-01-preview",
-          "dependsOn": [
-            "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]"
-          ],
           "location": "[resourceGroup().location]",
           "name": "[variables('sqlFirewallRuleName')]",
           "properties": {
-            "endIpAddress": "[if(variables('allowAzureIps'), '0.0.0.0', reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress)]",
-            "startIpAddress": "[if(variables('allowAzureIps'), '0.0.0.0', reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress)]"
+            "endIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]",
+            "startIpAddress": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('pipName'))).ipAddress]"
           },
-          "type": "firewallrules"
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]",
+            "[resourceId('Microsoft.Network/publicIPAddresses', variables('pipName'))]"
+          ]
         },
+        {
+          "condition": "[and(variables('allowAzureIps'), equals(parameters('databaseHost'),'Azure_SQL'))]",
+          "type": "firewallRules",
+          "name": "AllowAzureServices",
+          "apiVersion": "2014-04-01-preview",
+          "scale": null,
+          "properties": {
+              "startIpAddress": "0.0.0.0",
+              "endIpAddress": "0.0.0.0"
+          },
+          "dependsOn": [
+            "[concat('Microsoft.Sql/servers/', variables('dbServerName'))]"
+          ]
+        },        
         {
           "condition": "[variables('enableATP')]",
           "apiVersion": "2017-03-01-preview",
