@@ -431,7 +431,7 @@ else {
     # Check if TCP port 3306 is already in use, if it is throw an error
     $tcpPort = 3306
     $tcpConn = Get-NetTCPConnection | 
-        Where-Object {$_.LocalPort -eq $tcpPort -and ($_.LocalAddress -eq '127.0.0.1' -or $_.LocalAddress -eq '0.0.0.0')} | 
+        Where-Object {$_.LocalPort -eq $tcpPort } | 
         Select-Object -First 1
     if ($null -ne $tcpConn) {
         $tcpProcess = Get-Process -Id $tcpConn.OwningProcess
