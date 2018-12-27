@@ -224,7 +224,7 @@ switch ($databaseHost) {
         $exePath = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
         $scriptPath = Join-Path $scriptDir "Install-MySQL.ps1"
         # Skip installing MySQL server locally as Azure MySQL service is used
-        $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"", "-SkipServer", "-ServerFQDN", $r.properties.fullyQualifiedDomainName, "-UserName" $UserName)
+        $ArgList = @("-NonInteractive", "-File", "`"$scriptPath`"", "-SkipServer", "-ServerFQDN", $r.properties.fullyQualifiedDomainName, "-UserName", $UserName)
         # This requires PowerShell remoting and works around the problem where the Local System account cannot RunAs administrator
         Invoke-Command -ScriptBlock {Start-Process -FilePath $using:exePath -ArgumentList $using:ArgList -Verb runas -Wait} -ComputerName localhost -Credential $vmAdminCred -Verbose
     }
