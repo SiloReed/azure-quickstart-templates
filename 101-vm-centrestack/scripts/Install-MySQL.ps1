@@ -69,9 +69,9 @@ function Install-Product {
             $fileBaseName = "MySQLInstaller_ConnectorNet"
         }
     }
-    # Write install logs to temp
-    $fileErrLog = Join-Path $env:TEMP ("{0}_StdErr.log" -f $fileBaseName)
-    $fileOutputLog = Join-Path $env:TEMP ("{0}_StdOut.log" -f $fileBaseName)
+    # Write install logs to logdir
+    $fileErrLog = Join-Path $script:logDir ("{0}_StdErr.log" -f $fileBaseName)
+    $fileOutputLog = Join-Path $script:logDir ("{0}_StdOut.log" -f $fileBaseName)
     $productString = ("{0};{1};{2}" -f $Product, $version, $prodPlatform)
 
     $argList = @('community', 'install', $productString, '-silent')
@@ -157,8 +157,8 @@ function Install-VCRuntime {
     $progressPreference = 'Continue'
     Out-Log -Level Verbose -Message ("Completed download in: {0:g}" -f $m)
 
-    $fileErrLog = Join-Path $env:TEMP ("{0}_StdErr.log" -f $fileBaseName)
-    $fileOutputLog = Join-Path $env:TEMP ("{0}_StdOut.log" -f $fileBaseName)
+    $fileErrLog = Join-Path $script:logDir ("{0}_StdErr.log" -f $fileBaseName)
+    $fileOutputLog = Join-Path $script:logDir ("{0}_StdOut.log" -f $fileBaseName)
     $argList = @('/install', '/passive', '/norestart')
     $m = Measure-Command {
         try {
@@ -203,8 +203,8 @@ function Start-Command {
         [string] $Action
     )
 
-    $fileErrLog = Join-Path $env:TEMP ("{0}_StdErr.log" -f $Action)
-    $fileOutputLog = Join-Path $env:TEMP ("{0}_StdOut.log" -f $Action)
+    $fileErrLog = Join-Path $script:logDir ("{0}_StdErr.log" -f $Action)
+    $fileOutputLog = Join-Path $script:logDir ("{0}_StdOut.log" -f $Action)
     
     Out-Log -Level Verbose -Message ("Executing: {0} {1}" -f $Path, [string] $ArgList)
     $m = Measure-Command {
@@ -304,6 +304,7 @@ sync_relay_log_info=10000
 #endregion Here-String
 #region Script Body
 #region Setup
+
 # Start a stopwatch to time the entire script execution
 $swScript = [System.Diagnostics.Stopwatch]::StartNew()
 
@@ -322,17 +323,24 @@ $scriptName = $scriptFile.Name
 $scriptBaseName = $scriptFile.BaseName
 
 # Define folder where log files are written
-$logDir = Join-Path $scriptDir "Logs"
-if ((Test-Path $logDir) -eq $FALSE) {
-    New-Item $logDir -type directory | Out-Null
+$script:logDir = Join-Path $scriptDir "Logs"
+if ((Test-Path $script:logDir) -eq $FALSE) {
+    New-Item $script:logDir -type directory | Out-Null
 }
 
 # The new logfile will be created every day
 $logdate = Get-Date -f "yyyy-MM-dd_HH-mm-ss"
-$script:log = Join-Path $logDir ($scriptBaseName + "_" + $logdate + ".log")
+$script:log = Join-Path $script:logDir ($scriptBaseName + "_" + $logdate + ".log")
 Write-Output ("Log file: {0}" -f $script:log)
 
-. (Join-Path $scriptDir "Common-Functions.ps1")
+$CommonFunctionsScript = Join-Path $scriptDir "Common-Functions.ps1"
+# Check that the Common-Functions.ps1 exists
+if (-not (Test-Path $CommonFunctionsScript)) {
+    $m = "Cannot continue as {0} is required." -f $CommonFunctionsScript
+    Throw $m
+}
+# Dot-source the Common-Functions.ps1 script
+. $CommonFunctionsScript
 
 # Force TLSv1.2 else Invoke-WebRequest may throw "The underlying connection was closed: An unexpected error occurred on a send."
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -340,7 +348,7 @@ Write-Output ("Log file: {0}" -f $script:log)
 # Get the user's Documents folder for output files
 $myDocs = Join-Path $env:UserProfile "Documents"
 Out-Log -Level Info -Message ("Documents directory is '{0}'" -f $myDocs)
-Out-Log -Level Info -Message ("Temp directory is '{0}'" -f $env:TEMP)
+Out-Log -Level Info -Message ("Logging directory is '{0}'" -f $script:logDir)
 
 # This will return '32-bit' or '64-bit'
 $osArchitecture = (Get-WmiObject -Class Win32_OperatingSystem).OSArchitecture
@@ -535,8 +543,8 @@ else {
     $csuserPassword = [System.Web.Security.Membership]::GeneratePassword(8,0)
     $sqlCMD = @"
     CREATE DATABASE IF NOT EXISTS csmain;
-    CREATE USER 'csuser'@'localhost' IDENTIFIED BY '$csuserPassword';
-    GRANT ALL ON csmain.* TO 'csuser'@'localhost';
+    CREATE USER 'csuser'@'%' IDENTIFIED BY '$csuserPassword';
+    GRANT ALL ON csmain.* TO 'csuser'@'%';
 "@
     $createFile = Join-Path $myDocs "mysql-create.txt"
     $sqlCMD  | Out-File -FilePath $createFile -Encoding utf8
