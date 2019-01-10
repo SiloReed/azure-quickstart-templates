@@ -17,6 +17,7 @@
     2018-09-24  1.0.0   Initial version
     2018-09-24  1.0.1   Minor tweaks
     2018-09-24  1.0.2   Create csmain database and csuser user for principle of least privilege
+    2019-01-10  1.1.0   Create csmain user such that it can be used to connect from remote computer
 #>
 #Requires -Version 5.1
 #Requires -RunAsAdministrator
