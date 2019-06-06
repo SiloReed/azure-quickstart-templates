@@ -61,10 +61,10 @@
       ]
     },
     "windowsOSVersion": {
-      "value": "2016-Datacenter"
+      "value": "2019-Datacenter"
     },
     "databaseHost": {
-      "value": "Azure_MySQL"
+      "value": "None"
     },
     "skuName": {
       "value": "S0"

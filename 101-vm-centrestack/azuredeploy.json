@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
+  "contentVersion": "1.0.0.2",
   "parameters": {
     "_artifactsLocation": {
       "type": "string",
@@ -111,6 +111,9 @@
       },
       "defaultValue": "Standard_D2s_v3",
       "allowedValues": [
+        "Standard_B2s",
+        "Standard_B2ms",
+        "Standard_B4ms",
         "Standard_A2_v2",
         "Standard_A4_v2",
         "Standard_B2ms",
@@ -131,13 +134,14 @@
     },
     "windowsOSVersion": {
       "type": "string",
-      "defaultValue": "2016-Datacenter",
+      "defaultValue": "2019-Datacenter",
       "allowedValues": [
         "2012-R2-Datacenter",
-        "2016-Datacenter"
+        "2016-Datacenter",
+        "2019-Datacenter"
       ],
       "metadata": {
-        "description": "The Windows version for the VM. This will pick a fully patched image of this given Windows version. Allowed values: 2008-R2-SP1, 2012-Datacenter, 2012-R2-Datacenter."
+        "description": "The Windows version for the VM. This will pick a fully patched image of this given Windows version. Allowed values: 2012-R2-Datacenter, 2016-Datacenter, 2019-Datacenter."
       }
     },
     "databaseHost": {
@@ -148,7 +152,10 @@
         "Azure_SQL",
         "Azure_MySQL",
         "None"
-      ]
+      ],
+      "metadata": {
+        "description": "The datbase host type. This may be used to deploy a database in Azure. Allowed values: Local, Azure_SQL, Azure_MySQL, None."
+      }
     },
     "serverNameSQL": {
       "defaultValue": "csazuresql",
@@ -185,7 +192,7 @@
     "nicName": "nic-CentreStack",
     "vnetName": "vnet-CentreStack",
     "pipName": "pip-CentreStack",
-    "kvName": "kv-CentreStack",
+    "kvName": "[concat('kv-CS', uniqueString(resourceGroup().id))]",
     "nsgName": "nsg-CentreStack",
     "asgName": "asg-CentreStack",
     "subnetName": "sn-CentreStack",
